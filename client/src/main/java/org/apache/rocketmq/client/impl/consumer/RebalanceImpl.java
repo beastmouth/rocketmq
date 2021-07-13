@@ -260,9 +260,11 @@ public abstract class RebalanceImpl {
             }
             // 集群模式
             case CLUSTERING: {
-                // 获得该topic所有的队列
+                // 获得该topic所有的队列(本地缓存变量)
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
-                // 获取该topic下的客户端列表
+                // 获取该topic下的客户端列表(根据topic和consumerGroup为参数，向broker端发送获取该消费组下消费者Id列表的RPC通信请求
+                // （Broker端基于前面Consumer端上报的心跳包数据而构建的consumerTable做出响应返回，
+                // 业务请求码：GET_CONSUMER_LIST_BY_GROUP）)
                 List<String> cidAll = this.mQClientFactory.findConsumerIdList(topic, consumerGroup);
                 if (null == mqSet) {
                     if (!topic.startsWith(MixAll.RETRY_GROUP_TOPIC_PREFIX)) {
@@ -278,14 +280,19 @@ public abstract class RebalanceImpl {
                     List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
                     mqAll.addAll(mqSet);
 
+                    // 先对Topic下的消息消费队列、消费者Id排序
                     Collections.sort(mqAll);
                     Collections.sort(cidAll);
+
+                    // 然后用消息队列分配策略算法（默认为：消息队列的平均分配算法），计算出待拉取的消息队列
+                    // 这里的平均分配算法，类似于分页的算法，将所有MessageQueue排好序类似于记录，将所有消费端Consumer排好序类似页数，并求出每一页需要包含的平均size和每个页面记录的范围range，最后遍历整个range而计算出当前Consumer端应该分配到的记录（这里即为：MessageQueue）
 
                     // 在本地分配queue
                     AllocateMessageQueueStrategy strategy = this.allocateMessageQueueStrategy;
 
                     List<MessageQueue> allocateResult = null;
                     try {
+                        // 分配策略（分配queue给consumer）
                         allocateResult = strategy.allocate(
                             this.consumerGroup,
                             this.mQClientFactory.getClientId(),
@@ -302,6 +309,9 @@ public abstract class RebalanceImpl {
                         allocateResultSet.addAll(allocateResult);
                     }
 
+                    // 判断queue对应的消费者是否发生过变化
+                    // 具体内容：先将分配到的消息队列集合（mqSet）与processQueueTable做一个过滤比对。
+                    // 参考：https://github.com/apache/rocketmq/blob/master/docs/cn/design.md
                     boolean changed = this.updateProcessQueueTableInRebalance(topic, allocateResultSet, isOrder);
                     if (changed) {
                         log.info(
@@ -354,8 +364,10 @@ public abstract class RebalanceImpl {
                     }
                 } else if (pq.isPullExpired()) {
                     switch (this.consumeType()) {
+                        // PULL 模式 不管
                         case CONSUME_ACTIVELY:
                             break;
+                        // PUSH 模式
                         case CONSUME_PASSIVELY:
                             pq.setDropped(true);
                             if (this.removeUnnecessaryMessageQueue(mq, pq)) {
@@ -393,9 +405,11 @@ public abstract class RebalanceImpl {
                         log.info("doRebalance, {}, add a new mq, {}", consumerGroup, mq);
                         PullRequest pullRequest = new PullRequest();
                         pullRequest.setConsumerGroup(consumerGroup);
+                        // 随后填充至接下来要创建的pullRequest对象属性中
                         pullRequest.setNextOffset(nextOffset);
                         pullRequest.setMessageQueue(mq);
                         pullRequest.setProcessQueue(pq);
+                        // 创建拉取请求对象—pullRequest添加到拉取列表—pullRequestList中
                         pullRequestList.add(pullRequest);
                         changed = true;
                     }
@@ -419,6 +433,7 @@ public abstract class RebalanceImpl {
 
     public abstract void removeDirtyOffset(final MessageQueue mq);
 
+    // 获取该MessageQueue对象的下一个进度消费值offset，随后填充至接下来要创建的pullRequest对象属性中
     public abstract long computePullFromWhere(final MessageQueue mq);
 
     public abstract void dispatchPullRequest(final List<PullRequest> pullRequestList);
