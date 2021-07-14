@@ -35,6 +35,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
         if (null == old) {
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
+            // 当前时间+偏移时间（在这段时间内不可用）
             faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
 
             old = this.faultItemTable.putIfAbsent(name, faultItem);
