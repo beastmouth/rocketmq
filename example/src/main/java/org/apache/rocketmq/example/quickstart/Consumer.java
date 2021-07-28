@@ -58,6 +58,7 @@ public class Consumer {
          * Subscribe one more more topics to consume.
          */
         consumer.subscribe("t_test", "*");
+        consumer.subscribe("t_canal", "*");
 
         /*
          *  Register callback to execute on arrival of messages fetched from brokers.

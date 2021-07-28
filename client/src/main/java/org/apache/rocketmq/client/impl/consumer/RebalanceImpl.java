@@ -138,6 +138,7 @@ public abstract class RebalanceImpl {
             LockBatchRequestBody requestBody = new LockBatchRequestBody();
             requestBody.setConsumerGroup(this.consumerGroup);
             requestBody.setClientId(this.mQClientFactory.getClientId());
+            // 只是锁当前的queue ！！！
             requestBody.getMqSet().add(mq);
 
             try {
