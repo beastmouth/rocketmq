@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.client.impl.consumer;
 
+import com.alibaba.fastjson.JSON;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -218,6 +220,7 @@ public abstract class RebalanceImpl {
      */
     public void doRebalance(final boolean isOrder) {
         Map<String, SubscriptionData> subTable = this.getSubscriptionInner();
+        System.out.println("rebalanceImpl doRebalance " + JSON.toJSONString(subTable));
         if (subTable != null) {
             for (final Map.Entry<String, SubscriptionData> entry : subTable.entrySet()) {
                 final String topic = entry.getKey();

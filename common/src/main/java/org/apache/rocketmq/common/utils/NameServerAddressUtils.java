@@ -24,7 +24,8 @@ public class NameServerAddressUtils {
     public static final Pattern INST_ENDPOINT_PATTERN = Pattern.compile("^" + ENDPOINT_PREFIX + INSTANCE_REGEX + "\\..*");
 
     public static String getNameServerAddresses() {
-        return System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
+        return "127.0.0.1:9876";
+//        return System.getProperty(MixAll.NAMESRV_ADDR_PROPERTY, System.getenv(MixAll.NAMESRV_ADDR_ENV));
     }
 
     public static boolean validateInstanceEndpoint(String endpoint) {

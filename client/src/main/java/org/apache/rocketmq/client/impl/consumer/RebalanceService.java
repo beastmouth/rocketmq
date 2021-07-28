@@ -42,6 +42,8 @@ public class RebalanceService extends ServiceThread {
 
         while (!this.isStopped()) {
             this.waitForRunning(waitInterval);
+            String str = String.format("间隔%s后开始执行doRebalance", waitInterval);
+            System.out.println(str);
             this.mqClientFactory.doRebalance();
         }
 

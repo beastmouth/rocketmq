@@ -32,7 +32,7 @@ public class PullConsumer {
         consumer.setNamesrvAddr("127.0.0.1:9876");
         consumer.start();
 
-        Set<MessageQueue> mqs = consumer.fetchSubscribeMessageQueues("broker-a");
+        Set<MessageQueue> mqs = consumer.fetchSubscribeMessageQueues("TopicTest");
         for (MessageQueue mq : mqs) {
             System.out.printf("Consume from the queue: %s%n", mq);
             SINGLE_MQ:

@@ -16,6 +16,8 @@
  */
 package org.apache.rocketmq.client.impl.factory;
 
+import com.alibaba.fastjson.JSON;
+
 import java.io.UnsupportedEncodingException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -966,6 +968,7 @@ public class MQClientInstance {
     }
 
     public void rebalanceImmediately() {
+        // 唤醒对应线程 CountDownLatch 1 直接countDown
         this.rebalanceService.wakeup();
     }
 
