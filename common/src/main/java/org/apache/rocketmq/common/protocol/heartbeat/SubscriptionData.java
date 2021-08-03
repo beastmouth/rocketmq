@@ -31,6 +31,9 @@ public class SubscriptionData implements Comparable<SubscriptionData> {
     private boolean classFilterMode = false;
     private String topic;
     private String subString;
+    /**
+     * tag信息
+     */
     private Set<String> tagsSet = new HashSet<String>();
     private Set<Integer> codeSet = new HashSet<Integer>();
     private long subVersion = System.currentTimeMillis();
