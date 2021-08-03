@@ -642,7 +642,8 @@ public class DefaultMessageStore implements MessageStore {
                                 }
                             }
 
-                            // 过滤tags
+                            // 过滤tags 因为consumer注册的时候会把subscriptionData提交过来，
+                            // 同时broker读取文件中的消息的时候会根据subscriptionData的tag过滤 ===》 这就是为什么同一个group的cpnsumer订阅的tag要一致的原因
                             if (messageFilter != null
                                 && !messageFilter.isMatchedByConsumeQueue(isTagsCodeLegal ? tagsCode : null, extRet ? cqExtUnit : null)) {
                                 if (getResult.getBufferTotalSize() == 0) {
