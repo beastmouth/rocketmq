@@ -642,6 +642,7 @@ public class DefaultMessageStore implements MessageStore {
                                 }
                             }
 
+                            // 过滤tags
                             if (messageFilter != null
                                 && !messageFilter.isMatchedByConsumeQueue(isTagsCodeLegal ? tagsCode : null, extRet ? cqExtUnit : null)) {
                                 if (getResult.getBufferTotalSize() == 0) {
