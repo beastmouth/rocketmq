@@ -579,6 +579,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                         this.defaultMQPushConsumer.getMessageModel(), this.defaultMQPushConsumer.isUnitMode());
                 this.serviceState = ServiceState.START_FAILED;
 
+                // 校验配置参数
                 this.checkConfig();
 
                 this.copySubscription();
@@ -830,6 +831,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
     private void copySubscription() throws MQClientException {
         try {
+            // 获取consumer订阅信息 topic - tags
             Map<String, String> sub = this.defaultMQPushConsumer.getSubscription();
             if (sub != null) {
                 for (final Map.Entry<String, String> entry : sub.entrySet()) {
@@ -837,11 +839,13 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     final String subString = entry.getValue();
                     SubscriptionData subscriptionData = FilterAPI.buildSubscriptionData(this.defaultMQPushConsumer.getConsumerGroup(),
                             topic, subString);
+                    // 设置 topic - tags 信息
                     this.rebalanceImpl.getSubscriptionInner().put(topic, subscriptionData);
                 }
             }
 
             if (null == this.messageListenerInner) {
+                // 设置消息处理的监听器
                 this.messageListenerInner = this.defaultMQPushConsumer.getMessageListener();
             }
 
