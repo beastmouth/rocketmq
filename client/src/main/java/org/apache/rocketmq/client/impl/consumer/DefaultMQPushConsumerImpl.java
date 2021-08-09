@@ -238,6 +238,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         long cachedMessageSizeInMiB = processQueue.getMsgSize().get() / (1024 * 1024);
 
         if (cachedMessageCount > this.defaultMQPushConsumer.getPullThresholdForQueue()) {
+            // 超出拉取的阈值，稍后再拉
             this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
             if ((queueFlowControlTimes++ % 1000) == 0) {
                 log.warn(
@@ -257,7 +258,9 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             return;
         }
 
+        // 非顺序消费
         if (!this.consumeOrderly) {
+            // 超出最大偏移量
             if (processQueue.getMaxSpan() > this.defaultMQPushConsumer.getConsumeConcurrentlyMaxSpan()) {
                 this.executePullRequestLater(pullRequest, PULL_TIME_DELAY_MILLS_WHEN_FLOW_CONTROL);
                 if ((queueMaxSpanFlowControlTimes++ % 1000) == 0) {
@@ -269,7 +272,8 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 return;
             }
         } else {
-            // 如果队列被锁，才能够拉去消息
+            // 如果队列被锁，才能够拉去消息 在rebalance阶段会向broker发起加锁请求，加锁失败则不拉取消息
+            // org.apache.rocketmq.client.impl.consumer.RebalanceImpl.lock
             if (processQueue.isLocked()) {
                 if (!pullRequest.isLockedFirst()) {
                     // 获取偏移量
@@ -292,6 +296,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             }
         }
 
+        // 获取订阅信息
         final SubscriptionData subscriptionData = this.rebalanceImpl.getSubscriptionInner().get(pullRequest.getMessageQueue().getTopic());
         if (null == subscriptionData) {
             this.executePullRequestLater(pullRequest, pullTimeDelayMillsWhenException);
@@ -330,7 +335,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
                                 // 处理队列中新增刚刚拉取的消息
                                 boolean dispatchToConsume = processQueue.putMessage(pullResult.getMsgFoundList());
-                                // 提交处理
+                                // 提交消费处理请求(让消费的线程池去处理任务)
                                 DefaultMQPushConsumerImpl.this.consumeMessageService.submitConsumeRequest(
                                         pullResult.getMsgFoundList(),
                                         processQueue,

@@ -278,6 +278,8 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
             case CLUSTERING:
                 List<MessageExt> msgBackFailed = new ArrayList<MessageExt>(consumeRequest.getMsgs().size());
+                // 消费成功的话 i = ackIndex + 1 = consumerRequest.getMsgs().size -1 + 1 = consumerRequest.getMsgs().size -1 + 1
+                // 所以就不会进入for循环
                 for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
                     MessageExt msg = consumeRequest.getMsgs().get(i);
                     boolean result = this.sendMessageBack(msg, context);

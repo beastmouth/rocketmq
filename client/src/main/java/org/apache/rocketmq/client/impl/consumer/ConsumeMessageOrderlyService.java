@@ -414,9 +414,11 @@ public class ConsumeMessageOrderlyService implements ConsumeMessageService {
             }
 
             // client 上锁
+            // 对消息队列上锁 messageQueue
             final Object objLock = messageQueueLock.fetchLockObject(this.messageQueue);
             synchronized (objLock) {
                 if (MessageModel.BROADCASTING.equals(ConsumeMessageOrderlyService.this.defaultMQPushConsumerImpl.messageModel())
+                        // 如果是非广播模式,即集群模式,需要对processQueue队列上锁,其实就是之前的告诉broker对应messageQueue被当前消费者消费
                         || (this.processQueue.isLocked() && !this.processQueue.isLockExpired())) {
                     final long beginTime = System.currentTimeMillis();
                     for (boolean continueConsume = true; continueConsume; ) {
