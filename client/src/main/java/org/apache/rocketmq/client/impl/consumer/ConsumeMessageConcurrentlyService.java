@@ -299,6 +299,10 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
         }
 
+        // 此时offset为当前队列中最小的offset
+        // 会有一个问题：
+        // 假如大一点的offset的消息如果先被删除了，那此时消息都消费完，offset实际上是小于正常情况下的offset
+        // 此时rocketmq异常重启，会导致记录在offset之后的消息被重新消费
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
         if (offset >= 0 && !consumeRequest.getProcessQueue().isDropped()) {
             this.defaultMQPushConsumerImpl.getOffsetStore().updateOffset(consumeRequest.getMessageQueue(), offset, true);

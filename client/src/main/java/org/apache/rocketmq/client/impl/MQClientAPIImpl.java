@@ -798,6 +798,7 @@ public class MQClientAPIImpl {
         PullMessageResponseHeader responseHeader =
             (PullMessageResponseHeader) response.decodeCommandCustomHeader(PullMessageResponseHeader.class);
 
+        // 下次拉取消息的设置 开始的起点在这里设置
         return new PullResultExt(pullStatus, responseHeader.getNextBeginOffset(), responseHeader.getMinOffset(),
             responseHeader.getMaxOffset(), null, responseHeader.getSuggestWhichBrokerId(), response.getBody());
     }
