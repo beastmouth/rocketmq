@@ -235,7 +235,7 @@ public class MQClientInstance {
                     this.mQClientAPIImpl.start();
                     // Start various schedule tasks
                     this.startScheduledTask();
-                    // Start pull service
+                    // Start pull service (由单独的一个线程 pullMessageService 来负责拉取消息 - 单线程的定时任务线程池)
                     this.pullMessageService.start();
                     // Start rebalance service
                     this.rebalanceService.start();

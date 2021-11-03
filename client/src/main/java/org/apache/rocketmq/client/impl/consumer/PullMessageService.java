@@ -77,8 +77,10 @@ public class PullMessageService extends ServiceThread {
     }
 
     private void pullMessage(final PullRequest pullRequest) {
+        // 根据消费组名从 MQClientInstance 中获取消费者内部实现类 MQConsumerInner
         final MQConsumerInner consumer = this.mQClientFactory.selectConsumer(pullRequest.getConsumerGroup());
         if (consumer != null) {
+            // 只支持Push模式的实现类(拉模式可以直接显示调用MQ提供的API，推模式在拉模式上进行了一次封装)
             DefaultMQPushConsumerImpl impl = (DefaultMQPushConsumerImpl) consumer;
             impl.pullMessage(pullRequest);
         } else {
@@ -90,8 +92,14 @@ public class PullMessageService extends ServiceThread {
     public void run() {
         log.info(this.getServiceName() + " service started");
 
+        // stopped 是 volatile 的
         while (!this.isStopped()) {
             try {
+                // 从队列中获取一个拉取请求 如果队列为空线程则会阻塞
+                // 拉取请求添加的时机见 : executePullRequestLater 和 executePullRequestImmediately 方法
+                // 拉取请求添加的调用的节点 :
+                // 1) RocketMQ 根据 PullRequest 拉取任务执行完一次消息拉取任务后，又将 PullRequest 对象放入 pullRequestQueue 中
+                // 2) 在 RebalanceImpl 中创建 （PullRequest 真正创建的地方）
                 PullRequest pullRequest = this.pullRequestQueue.take();
                 this.pullMessage(pullRequest);
             } catch (InterruptedException ignored) {

@@ -36,6 +36,7 @@ import org.apache.rocketmq.common.message.MessageExt;
 import org.apache.rocketmq.common.protocol.body.ProcessQueueInfo;
 
 /**
+ * ProcessQueue 是 MessageQueue 在消费端的重现、快照
  * Queue consumption snapshot
  */
 public class ProcessQueue {
@@ -44,19 +45,26 @@ public class ProcessQueue {
     public final static long REBALANCE_LOCK_INTERVAL = Long.parseLong(System.getProperty("rocketmq.client.rebalance.lockInterval", "20000"));
     private final static long PULL_MAX_IDLE_TIME = Long.parseLong(System.getProperty("rocketmq.client.pull.pullMaxIdleTime", "120000"));
     private final InternalLogger log = ClientLogger.getLog();
+    // 读写锁 控制多线程并发修改 msgTreeMap consumingMsgOrderlyTreeMap
     private final ReadWriteLock treeMapLock = new ReentrantReadWriteLock();
+    // 消息存储容器 key: 消息在ConsumerQueue 中的偏移量
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
     private final AtomicLong msgCount = new AtomicLong();
     private final AtomicLong msgSize = new AtomicLong();
     private final Lock consumeLock = new ReentrantLock();
     /**
+     * 处理顺序消息
      * A subset of msgTreeMap, will only be used when orderly consume
      */
     private final TreeMap<Long, MessageExt> consumingMsgOrderlyTreeMap = new TreeMap<Long, MessageExt>();
     private final AtomicLong tryUnlockTimes = new AtomicLong(0);
+    // 当前 ProcessQueue 中包含的最大队列偏移量
     private volatile long queueOffsetMax = 0L;
+    // 当前 ProcessQueue 是否被丢弃
     private volatile boolean dropped = false;
+    // 上次开始拉取消息的时间戳
     private volatile long lastPullTimestamp = System.currentTimeMillis();
+    // 上次消息消费的时间戳
     private volatile long lastConsumeTimestamp = System.currentTimeMillis();
     private volatile boolean locked = false;
     private volatile long lastLockTimestamp = System.currentTimeMillis();
