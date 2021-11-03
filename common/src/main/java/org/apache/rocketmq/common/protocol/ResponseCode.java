@@ -39,8 +39,14 @@ public class ResponseCode extends RemotingSysResponseCode {
     public static final int TOPIC_EXIST_ALREADY = 18;
     public static final int PULL_NOT_FOUND = 19;
 
+    // 立即重试 消息存放在下一个commitLog文件中 GetMessageStatus:MESSAGE_WAS_REMOVING
     public static final int PULL_RETRY_IMMEDIATELY = 20;
 
+    // 偏移量移动 对应的GetMessageStatus:
+    // NO_MATCHED_LOGIC_QUEUE:未找到队列
+    // NO_MESSAGE_IN_QUEUE:队列中未包含消息
+    // OFFSET_OVERFLOW_BADLY:offset越界
+    // OFFSET_TOO_SMALL:offset未在消息队列中
     public static final int PULL_OFFSET_MOVED = 21;
 
     public static final int QUERY_NOT_FOUND = 22;
