@@ -741,6 +741,7 @@ public class MQClientAPIImpl {
         this.remotingClient.invokeAsync(addr, request, timeoutMillis, new InvokeCallback() {
             @Override
             public void operationComplete(ResponseFuture responseFuture) {
+                // NettyRemotingClient 在收到服务端相应的结果后，会去回调PullCallBack方法
                 RemotingCommand response = responseFuture.getResponseCommand();
                 if (response != null) {
                     try {
@@ -779,6 +780,7 @@ public class MQClientAPIImpl {
         final String addr) throws MQBrokerException, RemotingCommandException {
         PullStatus pullStatus = PullStatus.NO_NEW_MSG;
         switch (response.getCode()) {
+            // ResponeseCode 和 PullStatus 的状态转换
             case ResponseCode.SUCCESS:
                 pullStatus = PullStatus.FOUND;
                 break;
