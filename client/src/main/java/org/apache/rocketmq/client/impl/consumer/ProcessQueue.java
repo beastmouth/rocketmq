@@ -49,6 +49,7 @@ public class ProcessQueue {
     private final ReadWriteLock treeMapLock = new ReentrantReadWriteLock();
     // 消息存储容器 key: 消息在ConsumerQueue 中的偏移量
     private final TreeMap<Long, MessageExt> msgTreeMap = new TreeMap<Long, MessageExt>();
+    // 当前ProcessQueue的总消息数
     private final AtomicLong msgCount = new AtomicLong();
     private final AtomicLong msgSize = new AtomicLong();
     private final Lock consumeLock = new ReentrantLock();
