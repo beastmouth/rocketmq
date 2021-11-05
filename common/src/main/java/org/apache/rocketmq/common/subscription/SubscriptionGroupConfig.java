@@ -19,23 +19,34 @@ package org.apache.rocketmq.common.subscription;
 
 import org.apache.rocketmq.common.MixAll;
 
+// 消费组订阅信息存储在 Broker 的 ${ROCKET_HOME}/store/config/subscriptiopnGroup.json
+// 默认情况下， BrokerConfig.autoCreateSubscriptionGroup = true 即 第一次使用消费组时，如果不存在会自动创建一个
+//
 public class SubscriptionGroupConfig {
 
+    // 消费组名
     private String groupName;
 
+    // 是否可以消费（false代表当前消费组无法再拉取消息）
     private boolean consumeEnable = true;
+    // 是否允许从队列最小偏移量开始消费 目前未使用
     private boolean consumeFromMinEnable = true;
 
+    // 是否能以广播模式消费
     private boolean consumeBroadcastEnable = true;
 
+    // 重试队列个数 默认每一个broker上一个重试队列
     private int retryQueueNums = 1;
 
+    // 消息最大重试次数
     private int retryMaxTimes = 16;
 
     private long brokerId = MixAll.MASTER_ID;
 
+    // 如果消息阻塞（主）将转向该brokerid的服务器上拉取消息
     private long whichBrokerWhenConsumeSlowly = 1;
 
+    // 当消费发生变化时是否立即进行消息队列重新负载
     private boolean notifyConsumerIdsChangedEnable = true;
 
     public String getGroupName() {

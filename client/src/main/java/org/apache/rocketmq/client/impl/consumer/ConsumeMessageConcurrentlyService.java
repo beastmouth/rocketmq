@@ -271,10 +271,12 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
             case CLUSTERING:
                 List<MessageExt> msgBackFailed = new ArrayList<MessageExt>(consumeRequest.getMsgs().size());
                 // 与上面的ackIndex设置向对应，为0时，会去把这批消息重新调用sendMessageBack
+                // 发送ack消息（发送给broker延迟消息）
                 for (int i = ackIndex + 1; i < consumeRequest.getMsgs().size(); i++) {
                     MessageExt msg = consumeRequest.getMsgs().get(i);
                     boolean result = this.sendMessageBack(msg, context);
                     if (!result) {
+                        // 如果失败，则重试消费
                         msg.setReconsumeTimes(msg.getReconsumeTimes() + 1);
                         msgBackFailed.add(msg);
                     }
@@ -290,6 +292,9 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
                 break;
         }
 
+        // 从 消息消费队列 中删除这批消息，获取 移除该批消息后最小的偏移量
+        // 以便于消费者重启后能从上次消费的位置开始消费
+        // 即使消费结果返回的是RECONSUME_LATER,消费偏移量也会发生改变,此时broker会创建出一条全新的但是内容一样的消息,放到commitLog中
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
         if (offset >= 0 && !consumeRequest.getProcessQueue().isDropped()) {
             this.defaultMQPushConsumerImpl.getOffsetStore().updateOffset(consumeRequest.getMessageQueue(), offset, true);
