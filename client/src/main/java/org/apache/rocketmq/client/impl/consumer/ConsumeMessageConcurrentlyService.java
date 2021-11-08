@@ -295,6 +295,7 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         // 从 消息消费队列 中删除这批消息，获取 移除该批消息后最小的偏移量
         // 以便于消费者重启后能从上次消费的位置开始消费
         // 即使消费结果返回的是RECONSUME_LATER,消费偏移量也会发生改变,此时broker会创建出一条全新的但是内容一样的消息,放到commitLog中
+        // increaseOnly 只有大于内存中当前的消费偏移量才更新
         long offset = consumeRequest.getProcessQueue().removeMessage(consumeRequest.getMsgs());
         if (offset >= 0 && !consumeRequest.getProcessQueue().isDropped()) {
             this.defaultMQPushConsumerImpl.getOffsetStore().updateOffset(consumeRequest.getMessageQueue(), offset, true);

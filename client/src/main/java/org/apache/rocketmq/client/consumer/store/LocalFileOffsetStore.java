@@ -35,17 +35,54 @@ import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.common.message.MessageQueue;
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
+
+/**
+ * 消息进度文件存储内容
+ * 广播默认消息消费与消费组无关，直接保存队列信息
+ * MessageQueue : offset
+ * {
+ *     "offsetTable" : {
+ *         {
+ *             "brokerName": "broker-a",
+ *             "queueId": 3,
+ *             "topic": "TopicTest"
+ *         }:2,
+ *         {
+ *             "brokerName": "broker-a",
+ *             "queueId": 2,
+ *             "topic": "TopicTest"
+ *         }:1,
+ *         {
+ *             "brokerName": "broker-a",
+ *             "queueId": 1,
+ *             "topic": "TopicTest"
+ *         }:2,
+ *         {
+ *             "brokerName": "broker-a",
+ *             "queueId": 0,
+ *             "topic": "TopicTest"
+ *         }:2,
+ *     }
+ * }
+ */
+
+
 /**
  * Local storage implementation
  */
 public class LocalFileOffsetStore implements OffsetStore {
+    // 消息进度存储目录 -Drocketmq.client.localOffsetStoreDir
     public final static String LOCAL_OFFSET_STORE_DIR = System.getProperty(
         "rocketmq.client.localOffsetStoreDir",
         System.getProperty("user.home") + File.separator + ".rocketmq_offsets");
     private final static InternalLogger log = ClientLogger.getLog();
+    // 消息客户端
     private final MQClientInstance mQClientFactory;
+    // 消息消费组
     private final String groupName;
+    // 消息进度存储文件
     private final String storePath;
+    // 消息消费进度（内存）
     private ConcurrentMap<MessageQueue, AtomicLong> offsetTable =
         new ConcurrentHashMap<MessageQueue, AtomicLong>();
 
@@ -60,6 +97,7 @@ public class LocalFileOffsetStore implements OffsetStore {
 
     @Override
     public void load() throws MQClientException {
+        // 就是对offsetTable数据结构的封装
         OffsetSerializeWrapper offsetSerializeWrapper = this.readLocalOffset();
         if (offsetSerializeWrapper != null && offsetSerializeWrapper.getOffsetTable() != null) {
             offsetTable.putAll(offsetSerializeWrapper.getOffsetTable());
@@ -130,6 +168,7 @@ public class LocalFileOffsetStore implements OffsetStore {
 
     @Override
     public void persistAll(Set<MessageQueue> mqs) {
+        // 将offsetTable信息持久化到磁盘中 默认每5s持久化一次
         if (null == mqs || mqs.isEmpty())
             return;
 

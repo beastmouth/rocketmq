@@ -37,6 +37,25 @@ import org.apache.rocketmq.common.protocol.header.UpdateConsumerOffsetRequestHea
 import org.apache.rocketmq.remoting.exception.RemotingException;
 
 /**
+ * 集群模式
+ * {
+ *     "offsetTable" : {
+ *         "TopicTest@DataSyncConsumerGroup": {0:38,2:37,1:37,3:38},
+ *         "%RETRY%DataSyncConsumerGroup@DataSyncConsumerGroup": {0:0}
+ *     }
+ * }
+ *
+ * 消息流控方面的一个注意事项：
+ * 假如在消息偏移量为10的地方发生死锁导致消息一直无法被消费，而后面的消息都已经被消费了，此时假如ProcessQueue中
+ * 消息的最大偏移量和最小偏移量之差超过了2000（DefaultMQPushConsumer#consumeConcurrentlyMaxSpan）,则拉取消息就会被流控
+ * 不会再拉取新的消息
+ *
+ * 触发消息消费进度更新（内存中）的两种情况：
+ * 1）消费者每处理完一个消费请求 ConsumeRequest
+ * 2）Rebalance时这个消费队列被丢弃了（分发给了其他消费者去处理），此时就需要更新并持久化到broker
+ */
+
+/**
  * Remote storage implementation
  */
 public class RemoteBrokerOffsetStore implements OffsetStore {
