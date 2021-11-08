@@ -32,13 +32,16 @@ public class DefaultMessageFilter implements MessageFilter {
     @Override
     public boolean isMatchedByConsumeQueue(Long tagsCode, ConsumeQueueExt.CqExtUnit cqExtUnit) {
         if (null == tagsCode || null == subscriptionData) {
+            // tag | 订阅消息为空
             return true;
         }
 
         if (subscriptionData.isClassFilterMode()) {
+            // 类过滤
             return true;
         }
 
+        // * 或 hashcode 集合中包含
         return subscriptionData.getSubString().equals(SubscriptionData.SUB_ALL)
             || subscriptionData.getCodeSet().contains(tagsCode.intValue());
     }

@@ -609,6 +609,7 @@ public class DefaultMessageStore implements MessageStore {
                                 break;
                             }
 
+                            // 消息过滤
                             boolean extRet = false, isTagsCodeLegal = true;
                             if (consumeQueue.isExtAddr(tagsCode)) {
                                 extRet = consumeQueue.getExt(tagsCode, cqExtUnit);
