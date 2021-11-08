@@ -141,8 +141,10 @@ public abstract class RebalanceImpl {
 
             try {
                 Set<MessageQueue> lockedMq =
+                    // 向broker请求锁定MessageQueue（当前消费者占用）
                     this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ(findBrokerResult.getBrokerAddr(), requestBody, 1000);
                 for (MessageQueue mmqq : lockedMq) {
+                    // 锁定MessageQueue的同时也会锁定ProcessQueue
                     ProcessQueue processQueue = this.processQueueTable.get(mmqq);
                     if (processQueue != null) {
                         processQueue.setLocked(true);
@@ -185,8 +187,10 @@ public abstract class RebalanceImpl {
 
                 try {
                     Set<MessageQueue> lockOKMQSet =
+                        // 向Broker（Master主节点）发送锁定消息队列，该方法返回成功被当前消费者锁定的消息队列
                         this.mQClientFactory.getMQClientAPIImpl().lockBatchMQ(findBrokerResult.getBrokerAddr(), requestBody, 1000);
 
+                    // 将消息队列对应的消息消费队列锁定，同时更新加锁时间
                     for (MessageQueue mq : lockOKMQSet) {
                         ProcessQueue processQueue = this.processQueueTable.get(mq);
                         if (processQueue != null) {
@@ -198,6 +202,7 @@ public abstract class RebalanceImpl {
                             processQueue.setLastLockTimestamp(System.currentTimeMillis());
                         }
                     }
+                    // 将锁定失败的队列锁定状态设置为false（代表不被当前消费者所持有）
                     for (MessageQueue mq : mqs) {
                         if (!lockOKMQSet.contains(mq)) {
                             ProcessQueue processQueue = this.processQueueTable.get(mq);
@@ -383,8 +388,10 @@ public abstract class RebalanceImpl {
         for (MessageQueue mq : mqSet) {
             // 消息消费队列缓存中不存在当前队列 本次分配新增的队列
             if (!this.processQueueTable.containsKey(mq)) {
+                // 向broker发起锁定队列请求
                 if (isOrder && !this.lock(mq)) {
                     log.warn("doRebalance, {}, add a new mq failed, {}, because lock failed", consumerGroup, mq);
+                    // 加锁失败，跳过，等待下一次队列重新负载时再尝试加锁
                     continue;
                 }
 

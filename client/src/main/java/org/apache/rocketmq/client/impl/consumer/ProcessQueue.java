@@ -270,6 +270,7 @@ public class ProcessQueue {
         try {
             this.treeMapLock.writeLock().lockInterruptibly();
             try {
+                // 刚刚暂存进来的消息的最后一条offset
                 Long offset = this.consumingMsgOrderlyTreeMap.lastKey();
                 msgCount.addAndGet(0 - this.consumingMsgOrderlyTreeMap.size());
                 for (MessageExt msg : this.consumingMsgOrderlyTreeMap.values()) {
