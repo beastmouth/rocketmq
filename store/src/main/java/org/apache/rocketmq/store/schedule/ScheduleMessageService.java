@@ -350,6 +350,7 @@ public class ScheduleMessageService extends ConfigManager {
                                                 msgInner.getTopic(), msgInner);
                                             continue;
                                         }
+                                        // 放到对应的 %RETRY%+gid 重试topic下进行消费
                                         PutMessageResult putMessageResult =
                                             ScheduleMessageService.this.writeMessageStore
                                                 .putMessage(msgInner);
@@ -449,6 +450,7 @@ public class ScheduleMessageService extends ConfigManager {
             msgInner.setWaitStoreMsgOK(false);
             MessageAccessor.clearProperty(msgInner, MessageConst.PROPERTY_DELAY_TIME_LEVEL);
 
+            // 真正的TOPIC 即 重试topic %RETRY%+groupname
             msgInner.setTopic(msgInner.getProperty(MessageConst.PROPERTY_REAL_TOPIC));
 
             String queueIdStr = msgInner.getProperty(MessageConst.PROPERTY_REAL_QUEUE_ID);
