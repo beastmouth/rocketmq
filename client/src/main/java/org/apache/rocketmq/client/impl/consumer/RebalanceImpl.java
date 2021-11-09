@@ -167,6 +167,7 @@ public abstract class RebalanceImpl {
     }
 
     public void lockAll() {
+        // 构建 brokerName - MessageQueue 的关联关系
         HashMap<String, Set<MessageQueue>> brokerMqs = this.buildProcessQueueTableByBrokerName();
 
         Iterator<Entry<String, Set<MessageQueue>>> it = brokerMqs.entrySet().iterator();
@@ -388,7 +389,7 @@ public abstract class RebalanceImpl {
         for (MessageQueue mq : mqSet) {
             // 消息消费队列缓存中不存在当前队列 本次分配新增的队列
             if (!this.processQueueTable.containsKey(mq)) {
-                // 向broker发起锁定队列请求
+                // 向broker发起锁定队列请求 (向broker端请求锁定MessageQueue,同时在本地锁定对应的ProcessQueue)
                 if (isOrder && !this.lock(mq)) {
                     log.warn("doRebalance, {}, add a new mq failed, {}, because lock failed", consumerGroup, mq);
                     // 加锁失败，跳过，等待下一次队列重新负载时再尝试加锁

@@ -295,6 +295,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                             pullRequest, offset);
                     }
 
+                    // 使用获取到的偏移量
                     pullRequest.setPreviouslyLocked(true);
                     pullRequest.setNextOffset(offset);
                 }
