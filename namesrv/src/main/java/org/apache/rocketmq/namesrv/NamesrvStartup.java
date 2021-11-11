@@ -79,9 +79,12 @@ public class NamesrvStartup {
             return null;
         }
 
+        // nameserver 业务参数
         final NamesrvConfig namesrvConfig = new NamesrvConfig();
+        // nameserver 网络参数
         final NettyServerConfig nettyServerConfig = new NettyServerConfig();
         nettyServerConfig.setListenPort(9876);
+        // 指定配置文件的路径 -c configFile 指定配置文件路径
         if (commandLine.hasOption('c')) {
             String file = commandLine.getOptionValue('c');
             if (file != null) {
@@ -105,6 +108,7 @@ public class NamesrvStartup {
             System.exit(0);
         }
 
+        // --属性名 属性值 指定属性配置 例如 --listenPort 9876
         MixAll.properties2Object(ServerUtil.commandLine2Properties(commandLine), namesrvConfig);
 
         if (null == namesrvConfig.getRocketmqHome()) {
@@ -137,15 +141,18 @@ public class NamesrvStartup {
             throw new IllegalArgumentException("NamesrvController is null");
         }
 
+        // 初始化
         boolean initResult = controller.initialize();
         if (!initResult) {
             controller.shutdown();
             System.exit(-3);
         }
 
+        // 注册JVM钩子函数并启动服务器
         Runtime.getRuntime().addShutdownHook(new ShutdownHookThread(log, new Callable<Void>() {
             @Override
             public Void call() throws Exception {
+                // 优雅停机（先关闭线程池，及时释放资源）
                 controller.shutdown();
                 return null;
             }
