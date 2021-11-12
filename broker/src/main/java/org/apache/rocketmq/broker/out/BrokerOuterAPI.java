@@ -124,6 +124,7 @@ public class BrokerOuterAPI {
 
         final List<RegisterBrokerResult> registerBrokerResultList = new CopyOnWriteArrayList<>();
         List<String> nameServerAddressList = this.remotingClient.getNameServerAddressList();
+        // 遍历NameServer列表，broker消息服务器依次向NameServer发送心跳包
         if (nameServerAddressList != null && nameServerAddressList.size() > 0) {
 
             final RegisterBrokerRequestHeader requestHeader = new RegisterBrokerRequestHeader();
@@ -131,6 +132,7 @@ public class BrokerOuterAPI {
             requestHeader.setBrokerId(brokerId);
             requestHeader.setBrokerName(brokerName);
             requestHeader.setClusterName(clusterName);
+            // master 地址，初次请求时该值为空，slave向NameServer注册后返回
             requestHeader.setHaServerAddr(haServerAddr);
             requestHeader.setCompressed(compressed);
 
