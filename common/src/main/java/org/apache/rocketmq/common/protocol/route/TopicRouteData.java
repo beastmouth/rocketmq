@@ -25,10 +25,15 @@ import java.util.HashMap;
 import java.util.List;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
+// 路由发现是非实时的，需要客户端定时拉取主题最新的路由
 public class TopicRouteData extends RemotingSerializable {
+    // 顺序消息配置内容，来自于kvConfig
     private String orderTopicConf;
+    // topic队列元数据
     private List<QueueData> queueDatas;
+    // topic分布的broker元数据
     private List<BrokerData> brokerDatas;
+    // broker上过滤服务器的地址
     private HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public TopicRouteData cloneTopicRouteData() {
