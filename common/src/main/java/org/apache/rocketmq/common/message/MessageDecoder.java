@@ -471,6 +471,7 @@ public class MessageDecoder {
         return map;
     }
 
+    // 对消息进行编码 (固定批量发送消息的格式，方便broker解析)
     public static byte[] encodeMessage(Message message) {
         //only need flag, body, properties
         byte[] body = message.getBody();
@@ -480,12 +481,12 @@ public class MessageDecoder {
         //note properties length must not more than Short.MAX
         short propertiesLength = (short) propertiesBytes.length;
         int sysFlag = message.getFlag();
-        int storeSize = 4 // 1 TOTALSIZE
-            + 4 // 2 MAGICCOD
-            + 4 // 3 BODYCRC
-            + 4 // 4 FLAG
-            + 4 + bodyLen // 4 BODY
-            + 2 + propertiesLength;
+        int storeSize = 4 // 1 TOTALSIZE 总长度 4字节
+            + 4 // 2 MAGICCOD 魔数 4字节
+            + 4 // 3 BODYCRC body crc 4字节
+            + 4 // 4 FLAG flag 4字节
+            + 4 + bodyLen // 4 BODY body长度 4字节 bodyLen:消息体的长度
+            + 2 + propertiesLength; // 属性长度 2字节 扩展属性:扩展属性的长度
         ByteBuffer byteBuffer = ByteBuffer.allocate(storeSize);
         // 1 TOTALSIZE
         byteBuffer.putInt(storeSize);
