@@ -65,6 +65,11 @@ import org.apache.rocketmq.store.index.QueryOffsetResult;
 import org.apache.rocketmq.store.schedule.ScheduleMessageService;
 import org.apache.rocketmq.store.stats.BrokerStatsManager;
 
+/**
+ * 消息消费队列文件、消息属性索引文件都是基于CommitLog文件构建的
+ * 所以当生产者提交的消息存储到CommitLog文件中，ConsumeQueue、IndexFile需要及时更新，否则消息无法及时被消费
+ * 根据消息属性查找消息也会出现较大延迟
+ */
 public class DefaultMessageStore implements MessageStore {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -269,7 +274,10 @@ public class DefaultMessageStore implements MessageStore {
             }
             log.info("[SetReputOffset] maxPhysicalPosInLogicQueue={} clMinOffset={} clMaxOffset={} clConfirmedOffset={}",
                 maxPhysicalPosInLogicQueue, this.commitLog.getMinOffset(), this.commitLog.getMaxOffset(), this.commitLog.getConfirmOffset());
+            // 设置从哪个物理偏移量开始转发消息给ConsumeQueue和IndexFile
+            // 如果允许重复转发，reputFromOffset会设置为CommitLog的提交指针，否则会设置为CommitLog的内存中最大偏移量
             this.reputMessageService.setReputFromOffset(maxPhysicalPosInLogicQueue);
+            // 启动ReputMessageService线程，实时转发CommitLog文件更新事件
             this.reputMessageService.start();
 
             /**
@@ -1513,6 +1521,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public void putMessagePositionInfo(DispatchRequest dispatchRequest) {
+        // 获取对应的ConsumeQueue文件
         ConsumeQueue cq = this.findConsumeQueue(dispatchRequest.getTopic(), dispatchRequest.getQueueId());
         cq.putMessagePositionInfoWrapper(dispatchRequest);
     }
@@ -1971,18 +1980,24 @@ public class DefaultMessageStore implements MessageStore {
                     break;
                 }
 
+                // 返回CommitLog文件中从 reputFromOffset 偏移量开始的全部有效数据
                 SelectMappedBufferResult result = DefaultMessageStore.this.commitLog.getData(reputFromOffset);
                 if (result != null) {
                     try {
                         this.reputFromOffset = result.getStartOffset();
 
+                        // 循环读每条消息
                         for (int readSize = 0; readSize < result.getSize() && doNext; ) {
+                            // 一次读取一条
                             DispatchRequest dispatchRequest =
                                 DefaultMessageStore.this.commitLog.checkMessageAndReturnSize(result.getByteBuffer(), false, false);
                             int size = dispatchRequest.getBufferSize() == -1 ? dispatchRequest.getMsgSize() : dispatchRequest.getBufferSize();
 
                             if (dispatchRequest.isSuccess()) {
                                 if (size > 0) {
+                                    // 如果消息长度大于0，则调用doDispatch
+                                    // 最终将分别调用CommitLogDispatcherBuildConsumeQueue(构建消息消费队列)、
+                                    // CommitLogDispatcherBuildIndex(构建索引文件)
                                     DefaultMessageStore.this.doDispatch(dispatchRequest);
 
                                     if (BrokerRole.SLAVE != DefaultMessageStore.this.getMessageStoreConfig().getBrokerRole()
@@ -2040,7 +2055,9 @@ public class DefaultMessageStore implements MessageStore {
 
             while (!this.isStopped()) {
                 try {
+                    // 每执行一次任务推送休息1毫秒，就继续尝试推送消息到消息消费队列和索引文件
                     Thread.sleep(1);
+                    // 消息消费转发核心方法
                     this.doReput();
                 } catch (Exception e) {
                     DefaultMessageStore.log.warn(this.getServiceName() + " service has exception. ", e);

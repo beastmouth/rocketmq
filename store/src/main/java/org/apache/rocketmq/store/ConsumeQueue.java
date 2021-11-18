@@ -392,19 +392,24 @@ public class ConsumeQueue {
         for (int i = 0; i < maxRetries && canWrite; i++) {
             long tagsCode = request.getTagsCode();
             if (isExtWriteEnable()) {
+                // 消息消费队列扩展字段
                 ConsumeQueueExt.CqExtUnit cqExtUnit = new ConsumeQueueExt.CqExtUnit();
                 cqExtUnit.setFilterBitMap(request.getBitMap());
                 cqExtUnit.setMsgStoreTime(request.getStoreTimestamp());
                 cqExtUnit.setTagsCode(request.getTagsCode());
 
+                // TODO consumeQueueExt 作用
                 long extAddr = this.consumeQueueExt.put(cqExtUnit);
+                // TODO ????? 关于tag的设置
                 if (isExtAddr(extAddr)) {
                     tagsCode = extAddr;
                 } else {
+                    // 放不下 1
                     log.warn("Save consume queue extend fail, So just save tagsCode! {}, topic:{}, queueId:{}, offset:{}", cqExtUnit,
                         topic, queueId, request.getCommitLogOffset());
                 }
             }
+            // 该操作只追击并不刷盘、ConsumeQueue的刷盘方式固定为异步刷盘模式
             boolean result = this.putMessagePositionInfo(request.getCommitLogOffset(),
                 request.getMsgSize(), tagsCode, request.getConsumeQueueOffset());
             if (result) {
@@ -442,8 +447,11 @@ public class ConsumeQueue {
 
         this.byteBufferIndex.flip();
         this.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE);
+        // 消息偏移量
         this.byteBufferIndex.putLong(offset);
+        // 消息长度
         this.byteBufferIndex.putInt(size);
+        // tag hashcode
         this.byteBufferIndex.putLong(tagsCode);
 
         final long expectLogicOffset = cqOffset * CQ_STORE_UNIT_SIZE;

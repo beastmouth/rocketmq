@@ -50,7 +50,7 @@ public class ConsumeQueueExt {
     public static final int END_BLANK_DATA_LENGTH = 4;
 
     /**
-     * Addr can not exceed this value.For compatible.
+     * Addr can not exceed this value.For compateibl.
      */
     public static final long MAX_ADDR = Integer.MIN_VALUE - 1L;
     public static final long MAX_REAL_OFFSET = MAX_ADDR - Long.MIN_VALUE;
@@ -218,6 +218,7 @@ public class ConsumeQueueExt {
                 final int blankSize = this.mappedFileSize - wrotePosition - END_BLANK_DATA_LENGTH;
 
                 // check whether has enough space.
+                // 如果当前消息扩张大小大于空闲空间
                 if (size > blankSize) {
                     fullFillToEnd(mappedFile, wrotePosition);
                     log.info("No enough space(need:{}, has:{}) of file {}, so fill to end",
