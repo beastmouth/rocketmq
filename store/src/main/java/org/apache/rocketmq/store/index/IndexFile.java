@@ -37,6 +37,7 @@ public class IndexFile {
     private final MappedFile mappedFile;
     private final FileChannel fileChannel;
     private final MappedByteBuffer mappedByteBuffer;
+    // 40个字节 记录该IndexFile的统计信息
     private final IndexHeader indexHeader;
 
     public IndexFile(final String fileName, final int hashSlotNum, final int indexNum,
@@ -90,9 +91,13 @@ public class IndexFile {
     }
 
     public boolean putKey(final String key, final long phyOffset, final long storeTimestamp) {
+        // 当前已使用条目大于等于允许最大条目数时，返回false
         if (this.indexHeader.getIndexCount() < this.indexNum) {
+            // 根据key计算key的hashcode
             int keyHash = indexKeyHashMethod(key);
+            // keyHahs对hash槽数量取余定位到hashcode对应的hash槽下标
             int slotPos = keyHash % this.hashSlotNum;
+            // hashcode对应的hash槽的物理地址为 IndexHeader头部（40字节）+下标*每个hash槽的大小（4字节）
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
 
             FileLock fileLock = null;

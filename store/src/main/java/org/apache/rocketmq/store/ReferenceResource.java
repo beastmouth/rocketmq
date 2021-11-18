@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public abstract class ReferenceResource {
     protected final AtomicLong refCount = new AtomicLong(1);
     protected volatile boolean available = true;
+    // cleanupOver=true 代表 release成功将MappedByteBuffer资源释放
     protected volatile boolean cleanupOver = false;
     private volatile long firstShutdownTimestamp = 0;
 
@@ -41,11 +42,14 @@ public abstract class ReferenceResource {
     }
 
     public void shutdown(final long intervalForcibly) {
+        // 初次调用 avaliable 为 true
         if (this.available) {
             this.available = false;
             this.firstShutdownTimestamp = System.currentTimeMillis();
+            // 释放资源
             this.release();
         } else if (this.getRefCount() > 0) {
+            // 引用数>0，对比当前时间与第一次标记时间，如果已经超过了其最大拒绝存活期，每执行一次，就会将引用数-1000
             if ((System.currentTimeMillis() - this.firstShutdownTimestamp) >= intervalForcibly) {
                 this.refCount.set(-1000 - this.getRefCount());
                 this.release();

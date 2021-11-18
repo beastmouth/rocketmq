@@ -25,6 +25,14 @@ import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.store.config.BrokerRole;
 import org.apache.rocketmq.store.config.StorePathConfigHelper;
 
+// 因为同一主题的消息不连续地存储在commitlog文件中，如果从commitlog中查找消息，效率极其低下，所以使用 消息消费队列文件 Consumequeue
+// 该文件可以看成是commitlog的索引
+// consumequeue一级目录为消息主题，二级目录为该主题的消息队列
+// consumequeue 的每个单元只存储
+// commitlog offset   size   tag hashcode
+//     8字节           4字节    8字节
+// 单个ConsumeQueue文件 默认包含30万个条目，单个文件长度为 30w*20字节
+// 构建机制：当消息达到commitlog文件后，由专门的线程产生消息转发任务，从而构建消息消费队列文件与索引文件
 public class ConsumeQueue {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.STORE_LOGGER_NAME);
 
@@ -152,7 +160,9 @@ public class ConsumeQueue {
         }
     }
 
+    // 根据消息存储时间查找偏移量
     public long getOffsetInQueueByTime(final long timestamp) {
+        // 从第一个文件开始查找第一个最后更新时间大于当前时间的文件
         MappedFile mappedFile = this.mappedFileQueue.getMappedFileByTime(timestamp);
         if (mappedFile != null) {
             long offset = 0;
@@ -490,14 +500,18 @@ public class ConsumeQueue {
 
     public SelectMappedBufferResult getIndexBuffer(final long startIndex) {
         int mappedFileSize = this.mappedFileSize;
+        // startIndex * 20 得到在 consumequeue 中的物理偏移量
         long offset = startIndex * CQ_STORE_UNIT_SIZE;
         if (offset >= this.getMinLogicOffset()) {
+            // 根据偏移量定位到具体的物理文件
             MappedFile mappedFile = this.mappedFileQueue.findMappedFileByOffset(offset);
             if (mappedFile != null) {
+                // 通过偏移量与物理文件大小取模获取该文件的偏移量
                 SelectMappedBufferResult result = mappedFile.selectMappedBuffer((int) (offset % mappedFileSize));
                 return result;
             }
         }
+        // 小于，代表该消息已被删除
         return null;
     }
 
