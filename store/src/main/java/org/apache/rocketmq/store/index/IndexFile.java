@@ -106,11 +106,14 @@ public class IndexFile {
 
                 // fileLock = this.fileChannel.lock(absSlotPos, hashSlotSize,
                 // false);
+                // 读取hash槽中存储的数据(原来存储在hash槽中的值)
                 int slotValue = this.mappedByteBuffer.getInt(absSlotPos);
+                // 如果hash槽存储的数据<=0 或 > 当前索引文档中的索引条目格式
                 if (slotValue <= invalidIndex || slotValue > this.indexHeader.getIndexCount()) {
                     slotValue = invalidIndex;
                 }
 
+                // 计算待存储消息的时间戳与第一条消息时间戳的差值，并转换成秒
                 long timeDiff = storeTimestamp - this.indexHeader.getBeginTimestamp();
 
                 timeDiff = timeDiff / 1000;
@@ -123,15 +126,19 @@ public class IndexFile {
                     timeDiff = 0;
                 }
 
+                // 待存储的条目位置: IndexHeader（头部，40个字节） + hash槽数量 * hash槽大小（4字节） + 已有的条目数 * 条目标准大小（20字节）
                 int absIndexPos =
                     IndexHeader.INDEX_HEADER_SIZE + this.hashSlotNum * hashSlotSize
                         + this.indexHeader.getIndexCount() * indexSize;
 
+                // 放入具体条目信息到文件中（此次新增的条目信息）
                 this.mappedByteBuffer.putInt(absIndexPos, keyHash);
                 this.mappedByteBuffer.putLong(absIndexPos + 4, phyOffset);
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8, (int) timeDiff);
+                // 属于该hash槽上一条条目的index
                 this.mappedByteBuffer.putInt(absIndexPos + 4 + 8 + 4, slotValue);
 
+                // 往hash槽中存储最新的条目的index
                 this.mappedByteBuffer.putInt(absSlotPos, this.indexHeader.getIndexCount());
 
                 if (this.indexHeader.getIndexCount() <= 1) {
@@ -139,9 +146,11 @@ public class IndexFile {
                     this.indexHeader.setBeginTimestamp(storeTimestamp);
                 }
 
+                // 该hash槽首次添加
                 if (invalidIndex == slotValue) {
                     this.indexHeader.incHashSlotCount();
                 }
+                // 增加条目数
                 this.indexHeader.incIndexCount();
                 this.indexHeader.setEndPhyOffset(phyOffset);
                 this.indexHeader.setEndTimestamp(storeTimestamp);
@@ -196,6 +205,7 @@ public class IndexFile {
     public void selectPhyOffset(final List<Long> phyOffsets, final String key, final int maxNum,
         final long begin, final long end, boolean lock) {
         if (this.mappedFile.hold()) {
+            // 计算hash
             int keyHash = indexKeyHashMethod(key);
             int slotPos = keyHash % this.hashSlotNum;
             int absSlotPos = IndexHeader.INDEX_HEADER_SIZE + slotPos * hashSlotSize;
@@ -250,6 +260,7 @@ public class IndexFile {
                             break;
                         }
 
+                        // 当前的不是，找前一个（条目里面记的上一个hash值相同的条目）
                         nextIndexToRead = prevIndexRead;
                     }
                 }
