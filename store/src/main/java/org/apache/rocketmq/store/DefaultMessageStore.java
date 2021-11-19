@@ -194,21 +194,32 @@ public class DefaultMessageStore implements MessageStore {
         boolean result = true;
 
         try {
+            // 判断上一次退出是否正常
+            // 其实现机制是Broker启动时创建 ${ROCKET_HOME}/store/abort 文件，在退出时通过注册JVM钩子函数删除 abort 文件
+            // 如果下次启动时遇到abort文件，则说明Broker是异常退出的，Commitlog 和 ConsumeQueue 数据有可能不一致，需要修复
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
-            // load Commit Log
+            // load Commit Log 加载commitlog
+            // 加载 ${ROCKET_HOME}/store/commitlog 目录下所有文件并按照文件名排序
+            // 如果文件大小与配置文件的单个文件大小不一致，将忽略该目录下所有文件。然后创建MappedFile对象
+            // load 方法将 wrotePosition,flushedPosition,committedPosition 三个指针都设置为文件大小
             result = result && this.commitLog.load();
 
-            // load Consume Queue
+            // load Consume Queue 加载消息消费队列
+            // 思路与Commitlog大体一致，遍历消息消费队列根目录，获取该broker存储的所有主题，然后遍历每个主题目录，获取该主题下的所有消息消费队列
+            // 然后分别加载每个消息消费队列下的文件，构建ConsumeQueue对象，主要初始化 ConsumeQueue 的 topic，queueId，storePath，mappedFileSize
             result = result && this.loadConsumeQueue();
 
             if (result) {
+                // 加载存储检测点，检测点主要记录 Commitlog文件、ConsumeQueue文件、Index索引文件的刷盘点
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
+                // 加载索引
                 this.indexService.load(lastExitOK);
 
+                // 恢复
                 this.recover(lastExitOK);
 
                 log.info("load over, and the max phy offset = {}", this.getMaxPhyOffset());
@@ -1427,6 +1438,7 @@ public class DefaultMessageStore implements MessageStore {
         long maxPhyOffsetOfConsumeQueue = this.recoverConsumeQueue();
 
         if (lastExitOK) {
+            // Broker正常停止文件恢复的实现
             this.commitLog.recoverNormally(maxPhyOffsetOfConsumeQueue);
         } else {
             this.commitLog.recoverAbnormally(maxPhyOffsetOfConsumeQueue);
@@ -1469,6 +1481,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public void recoverTopicQueueTable() {
+        // 恢复ConsumeQueue文件
         HashMap<String/* topic-queueid */, Long/* offset */> table = new HashMap<String, Long>(1024);
         long minPhyOffset = this.commitLog.getMinOffset();
         for (ConcurrentMap<Integer, ConsumeQueue> maps : this.consumeQueueTable.values()) {
@@ -1479,6 +1492,8 @@ public class DefaultMessageStore implements MessageStore {
             }
         }
 
+        // commitlog 保存每个消息消费队列当前的存储逻辑偏移量
+        // 这是消息中不仅存储主题、消息队列ID害存储了消息队列偏移量的关键所在
         this.commitLog.setTopicQueueTable(table);
     }
 

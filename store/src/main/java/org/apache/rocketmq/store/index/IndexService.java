@@ -55,6 +55,7 @@ public class IndexService {
     }
 
     public boolean load(final boolean lastExitOK) {
+        // 加载索引文件目录下的文件
         File dir = new File(this.storePath);
         File[] files = dir.listFiles();
         if (files != null) {
@@ -62,12 +63,16 @@ public class IndexService {
             Arrays.sort(files);
             for (File file : files) {
                 try {
+                    // 加载索引文件
                     IndexFile f = new IndexFile(file.getPath(), this.hashSlotNum, this.indexNum, 0, 0);
                     f.load();
 
+                    // 上次退出异常
                     if (!lastExitOK) {
+                        // 索引文件消息最大存储时间 > 索引文件上次刷盘时间
                         if (f.getEndTimestamp() > this.defaultMessageStore.getStoreCheckpoint()
                             .getIndexMsgTimestamp()) {
+                            // 删除文件
                             f.destroy(0);
                             continue;
                         }
