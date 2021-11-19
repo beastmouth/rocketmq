@@ -218,8 +218,9 @@ public class ConsumeQueueExt {
                 final int blankSize = this.mappedFileSize - wrotePosition - END_BLANK_DATA_LENGTH;
 
                 // check whether has enough space.
-                // 如果当前消息扩张大小大于空闲空间
+                // 如果当前消息扩展实体大小大于空闲空间
                 if (size > blankSize) {
+                    // 存入-1，将写位置设置到文件大小（即标识为文件写满）
                     fullFillToEnd(mappedFile, wrotePosition);
                     log.info("No enough space(need:{}, has:{}) of file {}, so fill to end",
                         size, blankSize, mappedFile.getFileName());

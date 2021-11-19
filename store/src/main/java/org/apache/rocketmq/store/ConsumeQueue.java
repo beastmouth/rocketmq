@@ -392,7 +392,7 @@ public class ConsumeQueue {
         for (int i = 0; i < maxRetries && canWrite; i++) {
             long tagsCode = request.getTagsCode();
             if (isExtWriteEnable()) {
-                // 消息消费队列扩展字段
+                // 消息消费队列扩展字段存储单元
                 ConsumeQueueExt.CqExtUnit cqExtUnit = new ConsumeQueueExt.CqExtUnit();
                 cqExtUnit.setFilterBitMap(request.getBitMap());
                 cqExtUnit.setMsgStoreTime(request.getStoreTimestamp());
@@ -400,11 +400,10 @@ public class ConsumeQueue {
 
                 // TODO consumeQueueExt 作用
                 long extAddr = this.consumeQueueExt.put(cqExtUnit);
-                // TODO ????? 关于tag的设置
                 if (isExtAddr(extAddr)) {
+                    // 如果使用到了ConsumeQueueExt，tag就不是记录具体的tag，而是记录在扩展信息ConsumeQueueExt文件中的物理偏移量
                     tagsCode = extAddr;
                 } else {
-                    // 放不下 1
                     log.warn("Save consume queue extend fail, So just save tagsCode! {}, topic:{}, queueId:{}, offset:{}", cqExtUnit,
                         topic, queueId, request.getCommitLogOffset());
                 }
