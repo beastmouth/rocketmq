@@ -216,7 +216,7 @@ public class DefaultMessageStore implements MessageStore {
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
-                // 加载索引
+                // 加载索引文件
                 this.indexService.load(lastExitOK);
 
                 // 恢复
@@ -225,6 +225,7 @@ public class DefaultMessageStore implements MessageStore {
                 log.info("load over, and the max phy offset = {}", this.getMaxPhyOffset());
 
                 if (null != scheduleMessageService) {
+                    // 加载延迟队列、RocketMQ定时消息相关
                     result =  this.scheduleMessageService.load();
                 }
             }
@@ -1444,6 +1445,8 @@ public class DefaultMessageStore implements MessageStore {
             this.commitLog.recoverAbnormally(maxPhyOffsetOfConsumeQueue);
         }
 
+        // 恢复ConsumeQueue文件后，将在CommitLog实例中保存每个消息消费队列当前的存储逻辑偏移量
+        // 这也是消息中不仅存储主题、消息队列ID还存储了消息队列偏移量的关键所在
         this.recoverTopicQueueTable();
     }
 
@@ -1467,6 +1470,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private long recoverConsumeQueue() {
+        // 获取ConsumeQueue的最大物理偏移量
         long maxPhysicOffset = -1;
         for (ConcurrentMap<Integer, ConsumeQueue> maps : this.consumeQueueTable.values()) {
             for (ConsumeQueue logic : maps.values()) {

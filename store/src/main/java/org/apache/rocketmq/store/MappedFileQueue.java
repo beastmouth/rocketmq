@@ -176,6 +176,8 @@ public class MappedFileQueue {
             try {
                 MappedFile mappedFile = new MappedFile(file.getPath(), mappedFileSize);
 
+                // 将 WrotePosition/FlushedPosition/CommittedPosition 都设置为文件大小
+                // （代表文件已经被写满了）
                 mappedFile.setWrotePosition(this.mappedFileSize);
                 mappedFile.setFlushedPosition(this.mappedFileSize);
                 mappedFile.setCommittedPosition(this.mappedFileSize);

@@ -567,8 +567,11 @@ public class ConsumeQueue {
     }
 
     public void destroy() {
+        // 重置ConsumeQueue的maxPhysicOffset和minLogicOffset
         this.maxPhysicOffset = -1;
         this.minLogicOffset = 0;
+        // 将消息消费队列目录下的所有文件全部删除
+        // RocketMQ异常启动，在文件恢复过程中，RocketMQ会将最后一个有效文件中的所有消息重新转发到消息消费队列和索引文件，确保不丢失消息，同样也会带来消息重复的问题
         this.mappedFileQueue.destroy();
         if (isExtReadEnable()) {
             this.consumeQueueExt.destroy();

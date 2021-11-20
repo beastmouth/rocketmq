@@ -188,6 +188,7 @@ public class CommitLog {
     }
 
     /**
+     * 正常停止的恢复逻辑
      * When the normal exit, data recovery, all memory data have been flush
      */
     public void recoverNormally(long maxPhyOffsetOfConsumeQueue) {
@@ -227,6 +228,7 @@ public class CommitLog {
                         log.info("recover last 3 physics file over, last mapped file " + mappedFile.getFileName());
                         break;
                     } else {
+                        // 恢复下一个文件
                         mappedFile = mappedFiles.get(index);
                         byteBuffer = mappedFile.sliceByteBuffer();
                         processOffset = mappedFile.getFileFromOffset();
@@ -242,13 +244,20 @@ public class CommitLog {
             }
 
             processOffset += mappedFileOffset;
+            // 更新mappedFileQueue的flushWhere和committedWhere指针
             this.mappedFileQueue.setFlushedWhere(processOffset);
             this.mappedFileQueue.setCommittedWhere(processOffset);
             this.mappedFileQueue.truncateDirtyFiles(processOffset);
 
-            // Clear ConsumeQueue redundant data
+            // Clear ConsumeQueue redundant data 清除ConsumeQueue中冗余的数据
             if (maxPhyOffsetOfConsumeQueue >= processOffset) {
                 log.warn("maxPhyOffsetOfConsumeQueue({}) >= processOffset({}), truncate dirty logic files", maxPhyOffsetOfConsumeQueue, processOffset);
+                // 删除offset之后的所有文件
+                // 操作：遍历目录下的所有文件
+                // 1）文件的尾部偏移量小于offset则跳过该文件
+                // 2）文件的尾部偏移量大于offset，进一步比较offset与文件起始的偏移量
+                // 2.1）offset大于文件起始偏移量，说明当前文件包含了有效偏移量，设置MappedFile的flushedPosition和commitedPosition
+                // 2.2）offset小于文件起始偏移量，说明该文件是有效文件后面创建的，调用MappedFile#destory释放MappedFile占用的内存资源（内存映射与内存通道等），然后加入到待删除文件列表中，最终调用deleteExpiredFile将文件从物理磁盘删除
                 this.defaultMessageStore.truncateDirtyLogicFiles(processOffset);
             }
         } else {
@@ -455,6 +464,10 @@ public class CommitLog {
 
     @Deprecated
     public void recoverAbnormally(long maxPhyOffsetOfConsumeQueue) {
+        // 与正常停止文件恢复流程基本相同
+        // 主要的差别有两个
+        // 1）正常停止文件默认从倒数第三个文件开始进行恢复，而异常停止则需要从最后一个文件往前走，找到第一个消息存储正常的文件
+        // 2）如果commitlog目录没有消息文件，如果在消息消费队列目录下存在文件，则需要销毁
         // recover by the minimum time stamp
         boolean checkCRCOnRecover = this.defaultMessageStore.getMessageStoreConfig().isCheckCRCOnRecover();
         final List<MappedFile> mappedFiles = this.mappedFileQueue.getMappedFiles();
@@ -464,6 +477,7 @@ public class CommitLog {
             MappedFile mappedFile = null;
             for (; index >= 0; index--) {
                 mappedFile = mappedFiles.get(index);
+                // 判断文件是否符合恢复条件
                 if (this.isMappedFileMatchedRecover(mappedFile)) {
                     log.info("recover from this mapped file " + mappedFile.getFileName());
                     break;
@@ -542,21 +556,26 @@ public class CommitLog {
     private boolean isMappedFileMatchedRecover(final MappedFile mappedFile) {
         ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
 
+        // 如果不是 MESSAGE_MAGIC_CODE 返回false （判断文件魔数）
         int magicCode = byteBuffer.getInt(MessageDecoder.MESSAGE_MAGIC_CODE_POSTION);
         if (magicCode != MESSAGE_MAGIC_CODE) {
             return false;
         }
 
+        // 判断系统标识
         int sysFlag = byteBuffer.getInt(MessageDecoder.SYSFLAG_POSITION);
         int bornhostLength = (sysFlag & MessageSysFlag.BORNHOST_V6_FLAG) == 0 ? 8 : 20;
         int msgStoreTimePos = 4 + 4 + 4 + 4 + 4 + 8 + 8 + 4 + 8 + bornhostLength;
         long storeTimestamp = byteBuffer.getLong(msgStoreTimePos);
+        // 文件中第一条消息的存储时间等于0，返回false，说明该消息存储文件中未存储任何消息
         if (0 == storeTimestamp) {
             return false;
         }
 
+        // 判断文件存储时间 (isMessageIndexEnable=true说明索引文件的刷盘时间点也参与计算)
         if (this.defaultMessageStore.getMessageStoreConfig().isMessageIndexEnable()
             && this.defaultMessageStore.getMessageStoreConfig().isMessageIndexSafe()) {
+            // 文件第一条消息的时间戳小于文件监测点
             if (storeTimestamp <= this.defaultMessageStore.getStoreCheckpoint().getMinTimestampIndex()) {
                 log.info("find check timestamp, {} {}",
                     storeTimestamp,
