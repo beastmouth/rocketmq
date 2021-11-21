@@ -252,6 +252,7 @@ public class PullMessageProcessor extends AsyncNettyRequestProcessor implements 
 
             // 根据主从延迟，如果从节点包含下一次拉取的偏移量，设置下一次拉取任务的brokerId
             if (getMessageResult.isSuggestPullingFromSlave()) {
+                // 默认使用配置1，如果一个master拥有多台slave,则参与消息拉取负载的从服务器只会是其中一个（就是默认配置的这个）
                 responseHeader.setSuggestWhichBrokerId(subscriptionGroupConfig.getWhichBrokerWhenConsumeSlowly());
             } else {
                 responseHeader.setSuggestWhichBrokerId(MixAll.MASTER_ID);

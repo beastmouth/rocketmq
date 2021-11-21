@@ -101,6 +101,7 @@ public class MQClientInstance {
     private final ConcurrentMap<String/* Topic */, TopicRouteData> topicRouteTable = new ConcurrentHashMap<String, TopicRouteData>();
     private final Lock lockNamesrv = new ReentrantLock();
     private final Lock lockHeartbeat = new ReentrantLock();
+    // brokerAddrTable 地址缓存表 此处有所有Broker信息
     private final ConcurrentMap<String/* Broker Name */, HashMap<Long/* brokerId */, String/* address */>> brokerAddrTable =
         new ConcurrentHashMap<String, HashMap<Long, String>>();
     private final ConcurrentMap<String/* Broker Name */, HashMap<String/* address */, Integer>> brokerVersionTable =
@@ -1028,6 +1029,7 @@ public class MQClientInstance {
 
     public FindBrokerResult findBrokerAddressInSubscribe(
         final String brokerName,
+        // brokerId
         final long brokerId,
         final boolean onlyThisBroker
     ) {
@@ -1046,6 +1048,7 @@ public class MQClientInstance {
                 found = brokerAddr != null;
             }
 
+            // 未找到brokerid对应的broker，则随机返回Broker中任意一个Broker
             if (!found && !onlyThisBroker) {
                 Entry<Long, String> entry = map.entrySet().iterator().next();
                 brokerAddr = entry.getValue();
