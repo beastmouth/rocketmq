@@ -365,14 +365,18 @@ public class MappedFileQueue {
         if (null == mfs)
             return 0;
 
+        // 从倒数第二个文件开始
         int mfsLength = mfs.length - 1;
         int deleteCount = 0;
         List<MappedFile> files = new ArrayList<MappedFile>();
         if (null != mfs) {
             for (int i = 0; i < mfsLength; i++) {
                 MappedFile mappedFile = (MappedFile) mfs[i];
+                // 文件最大存活时间=文件的最后一次更新时间+文件存活时间(默认72小时)
                 long liveMaxTimestamp = mappedFile.getLastModifiedTimestamp() + expiredTime;
+                // 当前时间>=最大存活时间 或 需要立即删除
                 if (System.currentTimeMillis() >= liveMaxTimestamp || cleanImmediately) {
+                    // 删除文件(将该文件加入到待删除文件列表中，然后统一执行File#delete方法将文件从物理磁盘中删除)
                     if (mappedFile.destroy(intervalForcibly)) {
                         files.add(mappedFile);
                         deleteCount++;
