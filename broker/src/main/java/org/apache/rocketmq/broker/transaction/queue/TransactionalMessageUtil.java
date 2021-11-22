@@ -26,10 +26,12 @@ public class TransactionalMessageUtil {
     public static Charset charset = Charset.forName("utf-8");
 
     public static String buildOpTopic() {
+        // 当消息服务器收到事务消息的提交/回滚请求后，会将消息存储在该主题下 (即RMQ_SYS_TRANS_HALF_TOPIC处理完删除的消息)
         return TopicValidator.RMQ_SYS_TRANS_OP_HALF_TOPIC;
     }
 
     public static String buildHalfTopic() {
+        // prepare消息的主题，事务消息首先进入这个队列
         return TopicValidator.RMQ_SYS_TRANS_HALF_TOPIC;
     }
 
