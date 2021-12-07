@@ -138,7 +138,7 @@ public class ScheduleMessageService extends ConfigManager {
                 public void run() {
                     try {
                         if (started.get()) {
-                            // 每个十秒持久化一次延迟队列的消费进度
+                            // 每个十秒持久化一次延迟队列的处理进度
                             ScheduleMessageService.this.persist();
                         }
                     } catch (Throwable e) {
@@ -426,7 +426,7 @@ public class ScheduleMessageService extends ConfigManager {
                     long cqMinOffset = cq.getMinOffsetInQueue();
                     long cqMaxOffset = cq.getMaxOffsetInQueue();
                     if (offset < cqMinOffset) {
-                        // 下次消费进度更新
+                        // 下次拉取任务进度更新
                         failScheduleOffset = cqMinOffset;
                         log.error("schedule CQ offset invalid. offset={}, cqMinOffset={}, cqMaxOffset={}, queueId={}",
                             offset, cqMinOffset, cqMaxOffset, cq.getQueueId());
