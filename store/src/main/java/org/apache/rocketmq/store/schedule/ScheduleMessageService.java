@@ -126,10 +126,12 @@ public class ScheduleMessageService extends ConfigManager {
                 if (timeDelay != null) {
                     // 第一次，延迟一秒执行任务，后续根据对应延时时间来执行
                     // 延时级别和消息队列id对应关系 ： 消息队列id = 延时级别 - 1
+                    // shedule 在任务执行成功后，再加上对应的周期，然后再执行
                     this.timer.schedule(new DeliverDelayedMessageTimerTask(level, offset), FIRST_DELAY_TIME);
                 }
             }
 
+            // scheduleAtFixedRate 每隔指定时间就执行一次，与任务执行时间无关
             this.timer.scheduleAtFixedRate(new TimerTask() {
 
                 @Override
