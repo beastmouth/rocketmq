@@ -361,7 +361,7 @@ public class ScheduleMessageService extends ConfigManager {
                                                 msgInner.getTopic(), msgInner);
                                             continue;
                                         }
-                                        // 放到对应的 %RETRY%+gid 重试topic下进行消费
+                                        // 放到对应的 %RETRY%+gid 重试topic下进行消费(转发消息)
                                         PutMessageResult putMessageResult =
                                             ScheduleMessageService.this.writeMessageStore
                                                 .putMessage(msgInner);
@@ -400,6 +400,7 @@ public class ScheduleMessageService extends ConfigManager {
                                     }
                                 }
                             } else {
+                                // 会将下次任务执行时间设置为countdown 即 消息的延时转发时间-当前时间
                                 ScheduleMessageService.this.timer.schedule(
                                     new DeliverDelayedMessageTimerTask(this.delayLevel, nextOffset),
                                     countdown);
