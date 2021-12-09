@@ -159,6 +159,7 @@ public class BrokerConfig {
     private int registerNameServerPeriod = 1000 * 30;
 
     /**
+     * 消息检查最小间隔时间
      * The minimum time of the transactional message  to be checked firstly, one message only exceed this time interval
      * that can be checked.
      */
