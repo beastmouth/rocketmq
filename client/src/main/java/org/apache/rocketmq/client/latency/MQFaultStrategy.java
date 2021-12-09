@@ -102,14 +102,17 @@ public class MQFaultStrategy {
      */
     public void updateFaultItem(final String brokerName, final long currentLatency, boolean isolation) {
         if (this.sendLatencyFaultEnable) {
+            // 默认以30s作为computeNotAvailableDuration的参数
             long duration = computeNotAvailableDuration(isolation ? 30000 : currentLatency);
             this.latencyFaultTolerance.updateFaultItem(brokerName, currentLatency, duration);
         }
     }
 
     private long computeNotAvailableDuration(final long currentLatency) {
+        // 从latencyMax数组尾部开始寻找，找到第一个比currentLatency小的下标
         for (int i = latencyMax.length - 1; i >= 0; i--) {
             if (currentLatency >= latencyMax[i])
+                // 返回规避时间
                 return this.notAvailableDuration[i];
         }
 

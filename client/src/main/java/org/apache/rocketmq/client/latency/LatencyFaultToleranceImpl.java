@@ -31,8 +31,9 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     @Override
     public void updateFaultItem(final String name, final long currentLatency, final long notAvailableDuration) {
-        // 设置规避的broker
+        // 根据broker的名称从缓存表中获取FaultItem
         FaultItem old = this.faultItemTable.get(name);
+        // 不存在，创建
         if (null == old) {
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
@@ -43,7 +44,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
                 old.setCurrentLatency(currentLatency);
                 old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
             }
-        } else {
+        } /*存在，更新*/else {
             old.setCurrentLatency(currentLatency);
             old.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
         }
