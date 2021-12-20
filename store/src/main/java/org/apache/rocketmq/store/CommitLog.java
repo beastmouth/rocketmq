@@ -748,6 +748,7 @@ public class CommitLog {
         CompletableFuture<PutMessageStatus> flushResultFuture = submitFlushRequest(result, msg);
         // 此处会处理主从同步的结果（HA）
         CompletableFuture<PutMessageStatus> replicaResultFuture = submitReplicaRequest(result, msg);
+        // 将前后两个任务（flushResultFuture与replicaResultFuture）结合起来，构建一个最终的返回结果
         return flushResultFuture.thenCombine(replicaResultFuture, (flushStatus, replicaStatus) -> {
             if (flushStatus != PutMessageStatus.PUT_OK) {
                 putMessageResult.setPutMessageStatus(flushStatus);
@@ -912,6 +913,7 @@ public class CommitLog {
     }
 
     public CompletableFuture<PutMessageStatus> submitReplicaRequest(AppendMessageResult result, MessageExt messageExt) {
+        // 同步同步消息
         if (BrokerRole.SYNC_MASTER == this.defaultMessageStore.getMessageStoreConfig().getBrokerRole()) {
             HAService service = this.defaultMessageStore.getHaService();
             if (messageExt.isWaitStoreMsgOK()) {
