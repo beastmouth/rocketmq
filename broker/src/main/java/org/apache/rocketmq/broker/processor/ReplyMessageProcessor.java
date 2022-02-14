@@ -116,11 +116,13 @@ public class ReplyMessageProcessor extends AbstractSendMessageProcessor implemen
         }
 
         response.setCode(-1);
+        // 创建topic
         super.msgCheck(ctx, requestHeader, response);
         if (response.getCode() != -1) {
             return response;
         }
 
+        // topic创建成功（topic已经存在的场景）
         final byte[] body = request.getBody();
 
         int queueIdInt = requestHeader.getQueueId();
