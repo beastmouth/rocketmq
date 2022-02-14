@@ -165,6 +165,7 @@ public class TopicConfigManager extends ConfigManager {
                     if (topicConfig != null)
                         return topicConfig;
 
+                    // 默认的topic
                     TopicConfig defaultTopicConfig = this.topicConfigTable.get(defaultTopic);
                     if (defaultTopicConfig != null) {
                         if (defaultTopic.equals(TopicValidator.AUTO_CREATE_TOPIC_KEY_TOPIC)) {
@@ -174,8 +175,10 @@ public class TopicConfigManager extends ConfigManager {
                         }
 
                         if (PermName.isInherited(defaultTopicConfig.getPerm())) {
+                            // 创建topic
                             topicConfig = new TopicConfig(topic);
 
+                            // clientDefaultTopicQueueNums=4
                             int queueNums = Math.min(clientDefaultTopicQueueNums, defaultTopicConfig.getWriteQueueNums());
 
                             if (queueNums < 0) {
@@ -208,6 +211,7 @@ public class TopicConfigManager extends ConfigManager {
 
                         createNew = true;
 
+                        // 持久化
                         this.persist();
                     }
                 } finally {
