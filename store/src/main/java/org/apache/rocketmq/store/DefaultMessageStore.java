@@ -545,6 +545,7 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     public GetMessageResult getMessage(final String group, final String topic, final int queueId, final long offset,
+        /* 客户端在发起时会传入一个本次期望拉取的消息数量 */
         final int maxMsgNums,
         final MessageFilter messageFilter) {
         if (this.shutdown) {
@@ -608,6 +609,8 @@ public class DefaultMessageStore implements MessageStore {
                         long maxPhyOffsetPulling = 0;
 
                         int i = 0;
+                        // maxMsgNums 客户端在发起时会传入一个本次期望拉取的消息数量
+                        // maxFilterMessageCount 即一次消息拉取过程中，服务端最大扫描的索引字节数，即一次拉取扫描ConsumeQueue的字节数量
                         final int maxFilterMessageCount = Math.max(16000, maxMsgNums * ConsumeQueue.CQ_STORE_UNIT_SIZE);
                         final boolean diskFallRecorded = this.messageStoreConfig.isDiskFallRecorded();
 

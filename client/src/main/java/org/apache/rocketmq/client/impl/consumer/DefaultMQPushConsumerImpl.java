@@ -375,6 +375,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                         case NO_MATCHED_MSG:
                             pullRequest.setNextOffset(pullResult.getNextBeginOffset());
 
+                            // 没有拉取到消息的偏移量处理（将请求返回的下次拉取偏移量更新进消费的偏移量中）
                             DefaultMQPushConsumerImpl.this.correctTagsOffset(pullRequest);
 
                             DefaultMQPushConsumerImpl.this.executePullRequestImmediately(pullRequest);
@@ -426,6 +427,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
         boolean commitOffsetEnable = false;
         long commitOffsetValue = 0L;
         if (MessageModel.CLUSTERING == this.defaultMQPushConsumer.getMessageModel()) {
+            // 集群模式，获取当前的消费进度（隐式上报）
             commitOffsetValue = this.offsetStore.readOffset(pullRequest.getMessageQueue(), ReadOffsetType.READ_FROM_MEMORY);
             if (commitOffsetValue > 0) {
                 commitOffsetEnable = true;
@@ -468,11 +470,11 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                 this.defaultMQPushConsumer.getPullBatchSize(),
                 // 拉取系统标记
                 sysFlag,
-                // 当前MessageQueue的消费进度 （内存中）
+                // 当前MessageQueue的消费进度 （内存中） 拉取时会做一次上报
                 commitOffsetValue,
-                // 消息拉取过程中允许broker挂起时间 默认15s
+                // 消息拉取过程中允许broker挂起时间 默认15s 暂时不支持自定义
                 BROKER_SUSPEND_MAX_TIME_MILLIS,
-                // 消息拉取超时时间 默认30s
+                // 消息拉取超时时间 默认30s 暂时不支持自定义 - 即一次消息的拉取最大的超时时间为30s
                 CONSUMER_TIMEOUT_MILLIS_WHEN_SUSPEND,
                 // 消息拉取模式 默认异步拉取
                 CommunicationMode.ASYNC,
@@ -516,6 +518,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
 
     private void correctTagsOffset(final PullRequest pullRequest) {
         if (0L == pullRequest.getProcessQueue().getMsgCount().get()) {
+            // 将下次拉取的偏移量作为消费位点
             this.offsetStore.updateOffset(pullRequest.getMessageQueue(), pullRequest.getNextOffset(), true);
         }
     }
