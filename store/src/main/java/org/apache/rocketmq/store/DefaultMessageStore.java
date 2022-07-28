@@ -1674,7 +1674,7 @@ public class DefaultMessageStore implements MessageStore {
 
             // 指定删除文件的时间点
             boolean timeup = this.isTimeToDelete();
-            // 磁盘空间是否充足
+            // 磁盘空间满了
             boolean spacefull = this.isSpaceToDelete();
             boolean manualDelete = this.manualDeleteFileSeveralTimes > 0;
 

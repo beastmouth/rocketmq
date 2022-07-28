@@ -365,7 +365,6 @@ public class MappedFileQueue {
         if (null == mfs)
             return 0;
 
-        // 从倒数第二个文件开始
         int mfsLength = mfs.length - 1;
         int deleteCount = 0;
         List<MappedFile> files = new ArrayList<MappedFile>();
