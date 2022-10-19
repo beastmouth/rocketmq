@@ -15,8 +15,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
   -->
-
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
 
     <parent>
         <groupId>org.apache</groupId>
@@ -113,7 +114,7 @@
         <guava.version>31.0.1-jre</guava.version>
         <openmessaging.version>0.3.1-alpha</openmessaging.version>
         <log4j.version>1.2.17</log4j.version>
-        <snakeyaml.version>1.30</snakeyaml.version>
+        <snakeyaml.version>1.32</snakeyaml.version>
         <commons-codec.version>1.13</commons-codec.version>
         <logging-log4j.version>2.17.1</logging-log4j.version>
         <commons-validator.version>1.7</commons-validator.version>
@@ -125,12 +126,13 @@
         <annotations-api.version>6.0.53</annotations-api.version>
         <extra-enforcer-rules.version>1.0-beta-4</extra-enforcer-rules.version>
         <concurrentlinkedhashmap-lru.version>1.4.2</concurrentlinkedhashmap-lru.version>
-        <rocketmq-proto.version>2.0.0</rocketmq-proto.version>
+        <rocketmq-proto.version>2.0.1</rocketmq-proto.version>
         <grpc.version>1.45.0</grpc.version>
         <protobuf.version>3.20.1</protobuf.version>
         <disruptor.version>1.2.10</disruptor.version>
         <org.relection.version>0.9.11</org.relection.version>
         <caffeine.version>2.9.3</caffeine.version>
+        <spring.version>5.3.23</spring.version>
 
         <!-- Test dependencies -->
         <junit.version>4.13.2</junit.version>
@@ -274,10 +276,11 @@
                         <phase>validate</phase>
                         <configuration>
                             <configLocation>style/rmq_checkstyle.xml</configLocation>
-                            <encoding>UTF-8</encoding>
+                            <inputEncoding>UTF-8</inputEncoding>
                             <consoleOutput>true</consoleOutput>
                             <failsOnError>true</failsOnError>
-                            <includeTestSourceDirectory>false</includeTestSourceDirectory>
+                            <includeTestSourceDirectory>true</includeTestSourceDirectory>
+                            <excludes>**/generated*/**/*</excludes>
                         </configuration>
                         <goals>
                             <goal>check</goal>
@@ -865,6 +868,13 @@
                 <groupId>com.github.ben-manes.caffeine</groupId>
                 <artifactId>caffeine</artifactId>
                 <version>${caffeine.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework</groupId>
+                <artifactId>spring-core</artifactId>
+                <version>${spring.version}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>
