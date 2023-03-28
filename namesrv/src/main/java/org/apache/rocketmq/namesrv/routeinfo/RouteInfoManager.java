@@ -49,10 +49,15 @@ public class RouteInfoManager {
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.NAMESRV_LOGGER_NAME);
     private final static long BROKER_CHANNEL_EXPIRED_TIME = 1000 * 60 * 2;
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    // topic消息队列的路由信息
     private final HashMap<String/* topic */, List<QueueData>> topicQueueTable;
+    // broker基础信息
     private final HashMap<String/* brokerName */, BrokerData> brokerAddrTable;
+    // broker集群信息
     private final HashMap<String/* clusterName */, Set<String/* brokerName */>> clusterAddrTable;
+    // broker状态信息，nameserver每次收到心跳包时会替换该信息
     private final HashMap<String/* brokerAddr */, BrokerLiveInfo> brokerLiveTable;
+    // broker上的filterserver列表，用于类模式消息过滤，4.4及以后版本废弃
     private final HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
 
     public RouteInfoManager() {
@@ -110,7 +115,11 @@ public class RouteInfoManager {
         final Channel channel) {
         RegisterBrokerResult result = new RegisterBrokerResult();
         try {
+            // 设计亮点：NameServer与Broker保持长连接，Broker的状态信息存储在BrokerLiveTable中
+            // NameServer每收到一个心跳包，将更新BrokerLiveTable中关于Broker的状态和路由表信息（TopicQueueTable，BrokerAddrTable，BrokerLiveTable，FilterServerTable）
+            // 此处使用粒度较小的读写锁，允许并发读
             try {
+                // 写锁，防止并发修改InRouteInfoManager路由表
                 this.lock.writeLock().lockInterruptibly();
 
                 Set<String> brokerNames = this.clusterAddrTable.get(clusterName);
@@ -124,6 +133,7 @@ public class RouteInfoManager {
 
                 BrokerData brokerData = this.brokerAddrTable.get(brokerName);
                 if (null == brokerData) {
+                    // 首次注册
                     registerFirst = true;
                     brokerData = new BrokerData(clusterName, brokerName, new HashMap<Long, String>());
                     this.brokerAddrTable.put(brokerName, brokerData);
@@ -131,9 +141,11 @@ public class RouteInfoManager {
                 Map<Long, String> brokerAddrsMap = brokerData.getBrokerAddrs();
                 //Switch slave to master: first remove <1, IP:PORT> in namesrv, then add <0, IP:PORT>
                 //The same IP:PORT must only have one record in brokerAddrTable
+                // 处理 slave 变成 master 的情况
                 Iterator<Entry<Long, String>> it = brokerAddrsMap.entrySet().iterator();
                 while (it.hasNext()) {
                     Entry<Long, String> item = it.next();
+                    // 地址相同，但是broker由1变成0 => slave 变成 master
                     if (null != brokerAddr && brokerAddr.equals(item.getValue()) && brokerId != item.getKey()) {
                         it.remove();
                     }
@@ -144,11 +156,13 @@ public class RouteInfoManager {
 
                 if (null != topicConfigWrapper
                     && MixAll.MASTER_ID == brokerId) {
+                    // 如果topic配置信息发生变化或者为首次注册(比对时间戳和版本号)
                     if (this.isBrokerTopicConfigChanged(brokerAddr, topicConfigWrapper.getDataVersion())
                         || registerFirst) {
                         ConcurrentMap<String, TopicConfig> tcTable =
                             topicConfigWrapper.getTopicConfigTable();
                         if (tcTable != null) {
+                            // 创建或更新topic路由元数据(QueueData)
                             for (Map.Entry<String, TopicConfig> entry : tcTable.entrySet()) {
                                 this.createAndUpdateQueueData(brokerName, entry.getValue());
                             }
@@ -431,7 +445,9 @@ public class RouteInfoManager {
         while (it.hasNext()) {
             Entry<String, BrokerLiveInfo> next = it.next();
             long last = next.getValue().getLastUpdateTimestamp();
+            // 时间戳与当前间隔超过120s
             if ((last + BROKER_CHANNEL_EXPIRED_TIME) < System.currentTimeMillis()) {
+                // 关闭链接
                 RemotingUtil.closeChannel(next.getValue().getChannel());
                 it.remove();
                 log.warn("The broker channel expired, {} {}ms", next.getKey(), BROKER_CHANNEL_EXPIRED_TIME);
@@ -466,6 +482,7 @@ public class RouteInfoManager {
         if (null == brokerAddrFound) {
             brokerAddrFound = remoteAddr;
         } else {
+            // 链接被关
             log.info("the broker's channel destroyed, {}, clean it's data structure at once", brokerAddrFound);
         }
 
@@ -473,7 +490,9 @@ public class RouteInfoManager {
 
             try {
                 try {
+                    // 申请写锁
                     this.lock.writeLock().lockInterruptibly();
+                    // 移除与该Broker相关的路由信息
                     this.brokerLiveTable.remove(brokerAddrFound);
                     this.filterServerTable.remove(brokerAddrFound);
                     String brokerNameFound = null;
@@ -483,6 +502,7 @@ public class RouteInfoManager {
                     while (itBrokerAddrTable.hasNext() && (null == brokerNameFound)) {
                         BrokerData brokerData = itBrokerAddrTable.next().getValue();
 
+                        // brokerAddrs
                         Iterator<Entry<Long, String>> it = brokerData.getBrokerAddrs().entrySet().iterator();
                         while (it.hasNext()) {
                             Entry<Long, String> entry = it.next();
@@ -506,6 +526,7 @@ public class RouteInfoManager {
                     }
 
                     if (brokerNameFound != null && removeBrokerName) {
+                        // clusterAddrs
                         Iterator<Entry<String, Set<String>>> it = this.clusterAddrTable.entrySet().iterator();
                         while (it.hasNext()) {
                             Entry<String, Set<String>> entry = it.next();
@@ -528,6 +549,7 @@ public class RouteInfoManager {
                     }
 
                     if (removeBrokerName) {
+                        // topicQueue
                         Iterator<Entry<String, List<QueueData>>> itTopicQueueTable =
                             this.topicQueueTable.entrySet().iterator();
                         while (itTopicQueueTable.hasNext()) {
