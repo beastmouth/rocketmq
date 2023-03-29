@@ -75,6 +75,7 @@ public class NamesrvController {
 
     public boolean initialize() {
 
+        // TODO 存疑 加载磁盘中的broker，topic，路由信息，其他配置信息等
         this.kvConfigManager.load();
 
         this.remotingServer = new NettyRemotingServer(this.nettyServerConfig, this.brokerHousekeepingService);

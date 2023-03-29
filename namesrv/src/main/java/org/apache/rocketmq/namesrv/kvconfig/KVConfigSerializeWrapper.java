@@ -20,6 +20,7 @@ import java.util.HashMap;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class KVConfigSerializeWrapper extends RemotingSerializable {
+    // TODO 存疑 它用于保存 NameServer 的配置信息和运行时状态信息，包括 Broker 的元数据信息、Topic 的配置信息、路由信息等
     private HashMap<String/* Namespace */, HashMap<String/* Key */, String/* Value */>> configTable;
 
     public HashMap<String, HashMap<String, String>> getConfigTable() {
