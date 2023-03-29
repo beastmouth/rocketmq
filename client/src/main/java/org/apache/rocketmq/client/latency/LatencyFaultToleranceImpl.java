@@ -35,6 +35,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
         if (null == old) {
             final FaultItem faultItem = new FaultItem(name);
             faultItem.setCurrentLatency(currentLatency);
+            // 在当前时间+notAvailableDuration时间内faultItem不可用
             faultItem.setStartTimestamp(System.currentTimeMillis() + notAvailableDuration);
 
             old = this.faultItemTable.putIfAbsent(name, faultItem);
@@ -72,6 +73,7 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
         }
 
         if (!tmpList.isEmpty()) {
+            // 随机排序
             Collections.shuffle(tmpList);
 
             Collections.sort(tmpList);
@@ -98,7 +100,9 @@ public class LatencyFaultToleranceImpl implements LatencyFaultTolerance<String> 
 
     class FaultItem implements Comparable<FaultItem> {
         private final String name;
+        // 本次消息发送的延迟时间
         private volatile long currentLatency;
+        // 故障规避的开始时间
         private volatile long startTimestamp;
 
         public FaultItem(final String name) {

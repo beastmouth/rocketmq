@@ -162,7 +162,10 @@ public class MQClientInstance {
     public static TopicPublishInfo topicRouteData2TopicPublishInfo(final String topic, final TopicRouteData route) {
         TopicPublishInfo info = new TopicPublishInfo();
         info.setTopicRouteData(route);
+        // TODO 关于 orderTopicConf 的含义存疑
+        // orderTopicConf = brokerName:writeQueueNums;brokerName:writeQueueNums
         if (route.getOrderTopicConf() != null && route.getOrderTopicConf().length() > 0) {
+            // 顺序消息才会设置
             String[] brokers = route.getOrderTopicConf().split(";");
             for (String broker : brokers) {
                 String[] item = broker.split(":");
@@ -175,11 +178,14 @@ public class MQClientInstance {
 
             info.setOrderTopic(true);
         } else {
+            // 非顺序消息
             List<QueueData> qds = route.getQueueDatas();
             Collections.sort(qds);
             for (QueueData qd : qds) {
+                // 队列写权限
                 if (PermName.isWriteable(qd.getPerm())) {
                     BrokerData brokerData = null;
+                    // 根据BrokerName查找Broker信息
                     for (BrokerData bd : route.getBrokerDatas()) {
                         if (bd.getBrokerName().equals(qd.getBrokerName())) {
                             brokerData = bd;
@@ -187,6 +193,7 @@ public class MQClientInstance {
                         }
                     }
 
+                    // 找不到或者没有找到主节点，跳过
                     if (null == brokerData) {
                         continue;
                     }
@@ -195,6 +202,7 @@ public class MQClientInstance {
                         continue;
                     }
 
+                    // 填充队列信息
                     for (int i = 0; i < qd.getWriteQueueNums(); i++) {
                         MessageQueue mq = new MessageQueue(topic, qd.getBrokerName(), i);
                         info.getMessageQueueList().add(mq);
@@ -610,12 +618,18 @@ public class MQClientInstance {
             if (this.lockNamesrv.tryLock(LOCK_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)) {
                 try {
                     TopicRouteData topicRouteData;
+                    // isDefault = true 代表使用默认主题查询
                     if (isDefault && defaultMQProducer != null) {
+                        // 替换成 createTopicKey 查询
+                        // TBW102 能否查询到取决于 Broker 的配置 autoCreateTopicEnable 是否为true（是否自动创建Topic）
+                        // 为true则NameServer会返回路由信息，false则不会
                         topicRouteData = this.mQClientAPIImpl.getDefaultTopicRouteInfoFromNameServer(defaultMQProducer.getCreateTopicKey(),
                             1000 * 3);
+                        // 查询得到
                         if (topicRouteData != null) {
                             for (QueueData data : topicRouteData.getQueueDatas()) {
                                 int queueNums = Math.min(defaultMQProducer.getDefaultTopicQueueNums(), data.getReadQueueNums());
+                                // 替换成消息生产者默认的队列数
                                 data.setReadQueueNums(queueNums);
                                 data.setWriteQueueNums(queueNums);
                             }
@@ -625,8 +639,10 @@ public class MQClientInstance {
                     }
                     if (topicRouteData != null) {
                         TopicRouteData old = this.topicRouteTable.get(topic);
+                        // 本地路由信息是否发生变化
                         boolean changed = topicRouteDataIsChange(old, topicRouteData);
                         if (!changed) {
+                            // 再次校验是否发生变化
                             changed = this.isNeedUpdateTopicRouteInfo(topic);
                         } else {
                             log.info("the topic[{}] route info changed, old[{}] ,new[{}]", topic, old, topicRouteData);
@@ -635,10 +651,12 @@ public class MQClientInstance {
                         if (changed) {
                             TopicRouteData cloneTopicRouteData = topicRouteData.cloneTopicRouteData();
 
+                            // 更新broker信息
                             for (BrokerData bd : topicRouteData.getBrokerDatas()) {
                                 this.brokerAddrTable.put(bd.getBrokerName(), bd.getBrokerAddrs());
                             }
 
+                            // 更新消息推送的topic路由信息
                             // Update Pub info
                             {
                                 TopicPublishInfo publishInfo = topicRouteData2TopicPublishInfo(topic, topicRouteData);
@@ -653,6 +671,7 @@ public class MQClientInstance {
                                 }
                             }
 
+                            // 更新消息消费的queue路由信息
                             // Update sub info
                             {
                                 Set<MessageQueue> subscribeInfo = topicRouteData2TopicSubscribeInfo(topic, topicRouteData);

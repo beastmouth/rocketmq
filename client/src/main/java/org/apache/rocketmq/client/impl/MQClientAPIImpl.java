@@ -579,6 +579,7 @@ public class MQClientAPIImpl {
         });
     }
 
+    // 失败重试
     private void onExceptionImpl(final String brokerName,
         final Message msg,
         final long timeoutMillis,

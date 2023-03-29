@@ -585,9 +585,11 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
         InterruptedException, MQClientException {
 
         if (isCluster) {
+            // 集群模式
             this.mqClientInstance.getMQClientAPIImpl()
                 .putKVConfigValue(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG, key, value, timeoutMillis);
         } else {
+            // 非集群模式(会保留原先老的orderConfs)
             String oldOrderConfs = null;
             try {
                 oldOrderConfs =
@@ -605,12 +607,15 @@ public class DefaultMQAdminExtImpl implements MQAdminExt, MQAdminExtInner {
                     orderConfMap.put(items[0], oldOrderConf);
                 }
             }
+            // value = brokerName:writeQueueNums
             String[] items = value.split(":");
+            // key: brokerName value: brokerName + writeQueueNums
             orderConfMap.put(items[0], value);
 
             StringBuilder newOrderConf = new StringBuilder();
             String splitor = "";
             for (Map.Entry<String, String> entry : orderConfMap.entrySet()) {
+                // orderConf = brokerName:writeQueueNums;brokerName:writeQueueNums
                 newOrderConf.append(splitor).append(entry.getValue());
                 splitor = ";";
             }

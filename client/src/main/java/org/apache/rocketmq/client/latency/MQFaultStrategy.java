@@ -55,7 +55,12 @@ public class MQFaultStrategy {
         this.sendLatencyFaultEnable = sendLatencyFaultEnable;
     }
 
+    // 开不开启失败规避的区别：
+    // 开启的话：只要失败一次，就悲观的认为失败的Broker不可用，在接下来一段时间内就不会再发送消息
+    // 不开启的话：只是在本次消息发送过程中规避该Broker，下次消息发送还是会继续尝试
+    // 之所以需要失败规避，是因为Broker变动NameServer不会主动推送，而是客户端每隔30s定时去拉取
     public MessageQueue selectOneMessageQueue(final TopicPublishInfo tpInfo, final String lastBrokerName) {
+        // 为true代表开启故障延迟机制
         if (this.sendLatencyFaultEnable) {
             try {
                 int index = tpInfo.getSendWhichQueue().getAndIncrement();
@@ -64,12 +69,14 @@ public class MQFaultStrategy {
                     if (pos < 0)
                         pos = 0;
                     MessageQueue mq = tpInfo.getMessageQueueList().get(pos);
+                    // 当前broker是否可用
                     if (latencyFaultTolerance.isAvailable(mq.getBrokerName())) {
                         if (null == lastBrokerName || mq.getBrokerName().equals(lastBrokerName))
                             return mq;
                     }
                 }
 
+                // 没有可用的broker, 从之前的失败规避列表中选出一个broker
                 final String notBestBroker = latencyFaultTolerance.pickOneAtLeast();
                 int writeQueueNums = tpInfo.getQueueIdByBroker(notBestBroker);
                 if (writeQueueNums > 0) {
@@ -93,6 +100,7 @@ public class MQFaultStrategy {
     }
 
     public void updateFaultItem(final String brokerName, final long currentLatency, boolean isolation) {
+        // currentLatency 发送消息消耗时间
         if (this.sendLatencyFaultEnable) {
             long duration = computeNotAvailableDuration(isolation ? 30000 : currentLatency);
             this.latencyFaultTolerance.updateFaultItem(brokerName, currentLatency, duration);
@@ -101,10 +109,11 @@ public class MQFaultStrategy {
 
     private long computeNotAvailableDuration(final long currentLatency) {
         for (int i = latencyMax.length - 1; i >= 0; i--) {
+            // 从尾部向前查找，发送消耗时间超过latencyMax[i]
             if (currentLatency >= latencyMax[i])
                 return this.notAvailableDuration[i];
         }
-
+        // 找不到为0
         return 0;
     }
 }

@@ -350,6 +350,7 @@ public class DefaultRequestProcessor implements NettyRequestProcessor {
         if (topicRouteData != null) {
             // 假如为顺序消息
             if (this.namesrvController.getNamesrvConfig().isOrderMessageEnable()) {
+                // brokerName:writeQueueNums;brokerName:writeQueueNums
                 String orderTopicConf =
                     this.namesrvController.getKvConfigManager().getKVConfig(NamesrvUtil.NAMESPACE_ORDER_TOPIC_CONFIG,
                         requestHeader.getTopic());

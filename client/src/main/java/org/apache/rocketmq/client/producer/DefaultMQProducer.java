@@ -901,6 +901,8 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
     @Override
     public SendResult send(Collection<Message> msgs,
         long timeout) throws MQClientException, RemotingException, MQBrokerException, InterruptedException {
+        // batch 将一批消息封装成 MessageBatch 对象, 此处会生成消息id, MessageBatch继承Message，
+        // 这样使发送多条消息的处理流程与单条消息处理流程相同，汇聚到一个byte[]数组
         return this.defaultMQProducerImpl.send(batch(msgs), timeout);
     }
 

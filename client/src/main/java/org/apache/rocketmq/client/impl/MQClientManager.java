@@ -45,10 +45,13 @@ public class MQClientManager {
     }
 
     public MQClientInstance getOrCreateMQClientInstance(final ClientConfig clientConfig, RPCHook rpcHook) {
+        // ip + instance + unitname (关于同一个机器的问题，instance是上一步修改的进程id，但是同一个jvm的消费者和生产者，client是同一个)
         String clientId = clientConfig.buildMQClientId();
         MQClientInstance instance = this.factoryTable.get(clientId);
+        // 同一个clientId只会有一个实例
         if (null == instance) {
             instance =
+                // 封装了RocketMQ网络处理的API =》 客户端与NameServer，Broker交互的网络通道
                 new MQClientInstance(clientConfig.cloneClientConfig(),
                     this.factoryIndexGenerator.getAndIncrement(), clientId, rpcHook);
             MQClientInstance prev = this.factoryTable.putIfAbsent(clientId, instance);
