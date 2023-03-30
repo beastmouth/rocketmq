@@ -35,15 +35,21 @@ public class MappedFileQueue {
 
     private static final int DELETE_FILES_BATCH_MAX = 10;
 
+    // 存储目录
     private final String storePath;
 
+    // 单个文件的存储大小
     private final int mappedFileSize;
 
+    // MappedFile集合
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
 
+    // 创建MappedFile服务类
     private final AllocateMappedFileService allocateMappedFileService;
 
+    // 当前刷盘指针，表示该指针之前的所有数据全部持久化到磁盘
     private long flushedWhere = 0;
+    // 当前数据提交指针，内存中ByteBuffer当前的写指针，该值>=flushedWhere
     private long committedWhere = 0;
 
     private volatile long storeTimestamp = 0;
@@ -74,6 +80,7 @@ public class MappedFileQueue {
         }
     }
 
+    // “根据消息存储时间戳查找MappdFile”
     public MappedFile getMappedFileByTime(final long timestamp) {
         Object[] mfs = this.copyMappedFiles(0);
 
@@ -81,6 +88,7 @@ public class MappedFileQueue {
             return null;
 
         for (int i = 0; i < mfs.length; i++) {
+            // “从MappedFile列表中第一个文件开始查找，找到第一个最后一次更新时间大于待查找时间戳的文件，如果不存在，则返回最后一个MappedFile”
             MappedFile mappedFile = (MappedFile) mfs[i];
             if (mappedFile.getLastModifiedTimestamp() >= timestamp) {
                 return mappedFile;
@@ -289,6 +297,7 @@ public class MappedFileQueue {
 
         if (!this.mappedFiles.isEmpty()) {
             try {
+                // 返回第一个文件的起始偏移量
                 return this.mappedFiles.get(0).getFileFromOffset();
             } catch (IndexOutOfBoundsException e) {
                 //continue;
@@ -302,6 +311,7 @@ public class MappedFileQueue {
     public long getMaxOffset() {
         MappedFile mappedFile = getLastMappedFile();
         if (mappedFile != null) {
+            // 当前文件起始偏移量+MappedFile当前的读指针
             return mappedFile.getFileFromOffset() + mappedFile.getReadPosition();
         }
         return 0;
@@ -310,6 +320,7 @@ public class MappedFileQueue {
     public long getMaxWrotePosition() {
         MappedFile mappedFile = getLastMappedFile();
         if (mappedFile != null) {
+            // 当前文件起始偏移量+MappedFile当前的写指针
             return mappedFile.getFileFromOffset() + mappedFile.getWrotePosition();
         }
         return 0;
@@ -454,6 +465,7 @@ public class MappedFileQueue {
 
     /**
      * Finds a mapped file by offset.
+     * “根据消息偏移量查找MappdFile”
      *
      * @param offset Offset.
      * @param returnFirstOnNotFound If the mapped file is not found, then return the first one.
@@ -464,6 +476,7 @@ public class MappedFileQueue {
             MappedFile firstMappedFile = this.getFirstMappedFile();
             MappedFile lastMappedFile = this.getLastMappedFile();
             if (firstMappedFile != null && lastMappedFile != null) {
+                // 因为CommitLog会被定期删除的原因，第一个文件不一定是00000000000000000000
                 if (offset < firstMappedFile.getFileFromOffset() || offset >= lastMappedFile.getFileFromOffset() + this.mappedFileSize) {
                     LOG_ERROR.warn("Offset not matched. Request offset: {}, firstOffset: {}, lastOffset: {}, mappedFileSize: {}, mappedFiles count: {}",
                         offset,
@@ -472,6 +485,7 @@ public class MappedFileQueue {
                         this.mappedFileSize,
                         this.mappedFiles.size());
                 } else {
+                    // 计算当前偏移量相较于第一个文件开始的偏移量，相差了几个文件
                     int index = (int) ((offset / this.mappedFileSize) - (firstMappedFile.getFileFromOffset() / this.mappedFileSize));
                     MappedFile targetFile = null;
                     try {
