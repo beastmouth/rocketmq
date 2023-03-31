@@ -430,6 +430,7 @@ public class ConsumeQueue {
             return true;
         }
 
+        // 将消息偏移量，消息长度，tag哈希码写入到ByteBuffer
         this.byteBufferIndex.flip();
         this.byteBufferIndex.limit(CQ_STORE_UNIT_SIZE);
         this.byteBufferIndex.putLong(offset);

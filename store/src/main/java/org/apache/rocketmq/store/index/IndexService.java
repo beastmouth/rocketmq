@@ -199,12 +199,15 @@ public class IndexService {
     }
 
     public void buildIndex(DispatchRequest req) {
+        // 获取或创建IndexFile并获取文件最大偏移量
         IndexFile indexFile = retryGetAndCreateIndexFile();
         if (indexFile != null) {
+            // 获取IndexFile最大偏移量
             long endPhyOffset = indexFile.getEndPhyOffset();
             DispatchRequest msg = req;
             String topic = msg.getTopic();
             String keys = msg.getKeys();
+            // 小于，说明是重复数据，直接跳过
             if (msg.getCommitLogOffset() < endPhyOffset) {
                 return;
             }
@@ -219,7 +222,9 @@ public class IndexService {
                     return;
             }
 
+            // 唯一键存一次索引
             if (req.getUniqKey() != null) {
+                // 写入IndexFile
                 indexFile = putKey(indexFile, msg, buildKey(topic, req.getUniqKey()));
                 if (indexFile == null) {
                     log.error("putKey error commitlog {} uniqkey {}", req.getCommitLogOffset(), req.getUniqKey());
@@ -227,6 +232,7 @@ public class IndexService {
                 }
             }
 
+            // 不同的索引key存一次索引
             if (keys != null && keys.length() > 0) {
                 String[] keyset = keys.split(MessageConst.KEY_SEPARATOR);
                 for (int i = 0; i < keyset.length; i++) {
