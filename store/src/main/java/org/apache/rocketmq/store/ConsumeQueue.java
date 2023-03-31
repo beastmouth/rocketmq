@@ -89,23 +89,31 @@ public class ConsumeQueue {
         final List<MappedFile> mappedFiles = this.mappedFileQueue.getMappedFiles();
         if (!mappedFiles.isEmpty()) {
 
+            // 从倒数第三个开始
             int index = mappedFiles.size() - 3;
             if (index < 0)
+                // 不足三个，从第一个文件开始
                 index = 0;
 
+            // 当前文件大小
             int mappedFileSizeLogics = this.mappedFileSize;
             MappedFile mappedFile = mappedFiles.get(index);
+            // 文件和内存的映射
             ByteBuffer byteBuffer = mappedFile.sliceByteBuffer();
+            // 当前文件已确认的物理偏移量
             long processOffset = mappedFile.getFileFromOffset();
+            // 当前文件已校验通过的物理偏移量
             long mappedFileOffset = 0;
             long maxExtAddr = 1;
             while (true) {
+                // 逐条读取
                 for (int i = 0; i < mappedFileSizeLogics; i += CQ_STORE_UNIT_SIZE) {
                     long offset = byteBuffer.getLong();
                     int size = byteBuffer.getInt();
                     long tagsCode = byteBuffer.getLong();
 
                     if (offset >= 0 && size > 0) {
+                        // 校验通过，更改偏移量
                         mappedFileOffset = i + CQ_STORE_UNIT_SIZE;
                         this.maxPhysicOffset = offset + size;
                         if (isExtAddr(tagsCode)) {
@@ -118,14 +126,16 @@ public class ConsumeQueue {
                     }
                 }
 
+                // 当前文件读取完毕（等于的情况说明文件已经写满）
                 if (mappedFileOffset == mappedFileSizeLogics) {
                     index++;
                     if (index >= mappedFiles.size()) {
-
+                        // 所有文件处理已完毕，跳过循环
                         log.info("recover last consume queue file over, last mapped file "
                             + mappedFile.getFileName());
                         break;
                     } else {
+                        // 关联下一个文件
                         mappedFile = mappedFiles.get(index);
                         byteBuffer = mappedFile.sliceByteBuffer();
                         processOffset = mappedFile.getFileFromOffset();
@@ -133,13 +143,16 @@ public class ConsumeQueue {
                         log.info("recover next consume queue file, " + mappedFile.getFileName());
                     }
                 } else {
+                    // 最后一个文件且没有写满
                     log.info("recover current consume queue queue over " + mappedFile.getFileName() + " "
                         + (processOffset + mappedFileOffset));
                     break;
                 }
             }
 
+            // 最后一个文件的已确认的物理偏移量增加
             processOffset += mappedFileOffset;
+            // 更新ConsumeQueue文件的便宜进度
             this.mappedFileQueue.setFlushedWhere(processOffset);
             this.mappedFileQueue.setCommittedWhere(processOffset);
             this.mappedFileQueue.truncateDirtyFiles(processOffset);

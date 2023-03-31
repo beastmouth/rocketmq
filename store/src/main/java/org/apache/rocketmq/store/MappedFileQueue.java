@@ -156,10 +156,11 @@ public class MappedFileQueue {
         File dir = new File(this.storePath);
         File[] files = dir.listFiles();
         if (files != null) {
-            // ascending order
+            // ascending order 根据文件名排序
             Arrays.sort(files);
             for (File file : files) {
 
+                // 文件大小与配置文件中的单个文件大小不一致，忽略该目录下所有文件
                 if (file.length() != this.mappedFileSize) {
                     log.warn(file + "\t" + file.length()
                         + " length not matched message store config value, please check it manually");
@@ -167,8 +168,10 @@ public class MappedFileQueue {
                 }
 
                 try {
+                    // 加载文件并创建MappedFile对象
                     MappedFile mappedFile = new MappedFile(file.getPath(), mappedFileSize);
 
+                    // 设置以下三个指针为文件大小
                     mappedFile.setWrotePosition(this.mappedFileSize);
                     mappedFile.setFlushedPosition(this.mappedFileSize);
                     mappedFile.setCommittedPosition(this.mappedFileSize);

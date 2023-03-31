@@ -194,25 +194,30 @@ public class DefaultMessageStore implements MessageStore {
         boolean result = true;
 
         try {
+            // 校验abort文件是否存在（存在表示异常退出）
+            // Broker启动时会创建abort文件，在正常退出时通过钩子函数删除abort文件
             boolean lastExitOK = !this.isTempFileExist();
             log.info("last shutdown {}", lastExitOK ? "normally" : "abnormally");
 
             if (null != scheduleMessageService) {
+                // 加载延迟队列
                 result = result && this.scheduleMessageService.load();
             }
 
-            // load Commit Log
+            // load Commit Log 加载CommitLog
             result = result && this.commitLog.load();
 
-            // load Consume Queue
+            // load Consume Queue 加载 ConsumeQueue
             result = result && this.loadConsumeQueue();
 
             if (result) {
+                // 加载并存储checkPoint文件
                 this.storeCheckpoint =
                     new StoreCheckpoint(StorePathConfigHelper.getStoreCheckpoint(this.messageStoreConfig.getStorePathRootDir()));
 
                 this.indexService.load(lastExitOK);
 
+                // 恢复
                 this.recover(lastExitOK);
 
                 log.info("load over, and the max phy offset = {}", this.getMaxPhyOffset());
@@ -1351,14 +1356,20 @@ public class DefaultMessageStore implements MessageStore {
     }
 
     private void recover(final boolean lastExitOK) {
+        // 恢复ConsumeQueue
+        // 获取ConsumeQueue最大的消息物理偏移量
         long maxPhyOffsetOfConsumeQueue = this.recoverConsumeQueue();
 
+        // CommitLog操作
         if (lastExitOK) {
+            // 正常退出
             this.commitLog.recoverNormally(maxPhyOffsetOfConsumeQueue);
         } else {
+            // 异常退出
             this.commitLog.recoverAbnormally(maxPhyOffsetOfConsumeQueue);
         }
 
+        // 恢复ConsumeQueue文件后，将每个消息消费队列当前的存储逻辑偏移量保存到CommitLog实例中
         this.recoverTopicQueueTable();
     }
 
@@ -1384,7 +1395,9 @@ public class DefaultMessageStore implements MessageStore {
     private long recoverConsumeQueue() {
         long maxPhysicOffset = -1;
         for (ConcurrentMap<Integer, ConsumeQueue> maps : this.consumeQueueTable.values()) {
+            // 当前这个topic的队列
             for (ConsumeQueue logic : maps.values()) {
+                // 某一条队列id的文件
                 logic.recover();
                 if (logic.getMaxPhysicOffset() > maxPhysicOffset) {
                     maxPhysicOffset = logic.getMaxPhysicOffset();
