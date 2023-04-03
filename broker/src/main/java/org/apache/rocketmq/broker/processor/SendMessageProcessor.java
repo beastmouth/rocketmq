@@ -294,8 +294,11 @@ public class SendMessageProcessor extends AbstractSendMessageProcessor implement
             }
             putMessageResult = this.brokerController.getTransactionalMessageService().asyncPrepareMessage(msgInner);
         } else {
+            // 写消息
             putMessageResult = this.brokerController.getMessageStore().asyncPutMessage(msgInner);
         }
+        // 先定义CompletableFuture的thenApply方法，该方法不会立即执行
+        // 而是在CompletableFuture的complete方法被调用时才执行
         return handlePutMessageResultFuture(putMessageResult, response, request, msgInner, responseHeader, mqtraceContext, ctx, queueIdInt);
     }
 

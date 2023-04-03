@@ -660,8 +660,11 @@ public class CommitLog {
         storeStatsService.getSinglePutMessageTopicTimesTotal(msg.getTopic()).incrementAndGet();
         storeStatsService.getSinglePutMessageTopicSizeTotal(topic).addAndGet(result.getWroteBytes());
 
+        // 刷盘
         CompletableFuture<PutMessageStatus> flushResultFuture = submitFlushRequest(result, putMessageResult, msg);
+        // HAService 主从同步
         CompletableFuture<PutMessageStatus> replicaResultFuture = submitReplicaRequest(result, putMessageResult, msg);
+        // 联合任务
         return flushResultFuture.thenCombine(replicaResultFuture, (flushStatus, replicaStatus) -> {
             if (flushStatus != PutMessageStatus.PUT_OK) {
                 putMessageResult.setPutMessageStatus(PutMessageStatus.FLUSH_DISK_TIMEOUT);
@@ -934,7 +937,9 @@ public class CommitLog {
                     GroupCommitRequest request = new GroupCommitRequest(result.getWroteOffset() + result.getWroteBytes(),
                             this.defaultMessageStore.getMessageStoreConfig().getSyncFlushTimeout());
                     service.putRequest(request);
+                    // 唤醒线程
                     service.getWaitNotifyObject().wakeupAll();
+                    // 返回一个异步结果（之前定义的thenApply会在这里处理完成后调用）
                     return request.future();
                 }
                 else {

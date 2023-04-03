@@ -422,6 +422,7 @@ public class DefaultMessageStore implements MessageStore {
         }
 
         long beginTime = this.getSystemClock().now();
+        // 异步写入消息
         CompletableFuture<PutMessageResult> putResultFuture = this.commitLog.asyncPutMessage(msg);
 
         putResultFuture.thenAccept((result) -> {
