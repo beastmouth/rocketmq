@@ -615,6 +615,7 @@ public class DefaultMessageStore implements MessageStore {
                             }
 
                             if (messageFilter != null
+                                // 根据tag hash码过滤
                                 && !messageFilter.isMatchedByConsumeQueue(isTagsCodeLegal ? tagsCode : null, extRet ? cqExtUnit : null)) {
                                 if (getResult.getBufferTotalSize() == 0) {
                                     status = GetMessageStatus.NO_MATCHED_MESSAGE;
