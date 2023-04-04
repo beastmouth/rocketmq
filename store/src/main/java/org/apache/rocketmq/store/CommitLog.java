@@ -622,7 +622,7 @@ public class CommitLog {
 
                 // 替换topic为 SCHEDULE_TOPIC_XXXX , 延时消息的topic
                 topic = ScheduleMessageService.SCHEDULE_TOPIC;
-                // 计算要丢到哪个队列中
+                // 计算要丢到哪个队列中 根据延时等级计算队列id
                 queueId = ScheduleMessageService.delayLevel2QueueId(msg.getDelayTimeLevel());
 
                 // Backup real topic, queueId
