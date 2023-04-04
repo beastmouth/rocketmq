@@ -259,7 +259,9 @@ public abstract class RebalanceImpl {
                 }
                 break;
             }
+            // 集群模式
             case CLUSTERING: {
+                // 获取队列列表与消费者列表
                 Set<MessageQueue> mqSet = this.topicSubscribeInfoTable.get(topic);
                 List<String> cidAll = this.mQClientFactory.findConsumerIdList(topic, consumerGroup);
                 if (null == mqSet) {
@@ -276,6 +278,7 @@ public abstract class RebalanceImpl {
                     List<MessageQueue> mqAll = new ArrayList<MessageQueue>();
                     mqAll.addAll(mqSet);
 
+                    // 排序
                     Collections.sort(mqAll);
                     Collections.sort(cidAll);
 
@@ -283,6 +286,7 @@ public abstract class RebalanceImpl {
 
                     List<MessageQueue> allocateResult = null;
                     try {
+                        // 根据不同策略进行负载均衡
                         allocateResult = strategy.allocate(
                             this.consumerGroup,
                             this.mQClientFactory.getClientId(),
@@ -342,7 +346,10 @@ public abstract class RebalanceImpl {
 
             if (mq.getTopic().equals(topic)) {
                 if (!mqSet.contains(mq)) {
+                    // 经过本次负载均衡，该mq被分配给其他消费者，需要暂停该消息队列消息的消费
                     pq.setDropped(true);
+                    // ProcessQueue中的消息将不会再被消费
+                    // 将MessageQueue，ProcessQueue从缓存列表中移除，且持久化要移除的MessageQueue的消费进度
                     if (this.removeUnnecessaryMessageQueue(mq, pq)) {
                         it.remove();
                         changed = true;
@@ -376,14 +383,17 @@ public abstract class RebalanceImpl {
                     continue;
                 }
 
+                // 删除内存中过期的消费进度
                 this.removeDirtyOffset(mq);
                 ProcessQueue pq = new ProcessQueue();
+                // 获取最新的消费进度
                 long nextOffset = this.computePullFromWhere(mq);
                 if (nextOffset >= 0) {
                     ProcessQueue pre = this.processQueueTable.putIfAbsent(mq, pq);
                     if (pre != null) {
                         log.info("doRebalance, {}, mq already exists, {}", consumerGroup, mq);
                     } else {
+                        // 首次消费该队列，创建PullRequest请求
                         log.info("doRebalance, {}, add a new mq, {}", consumerGroup, mq);
                         PullRequest pullRequest = new PullRequest();
                         pullRequest.setConsumerGroup(consumerGroup);
