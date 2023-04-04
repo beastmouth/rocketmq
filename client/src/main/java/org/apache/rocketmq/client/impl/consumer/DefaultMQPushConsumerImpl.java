@@ -279,6 +279,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
             // 顺序消费
             if (processQueue.isLocked()) {
                 if (!pullRequest.isLockedFirst()) {
+                    // 如果该处理队列是第一次拉取任务，则首先计算拉取偏移量，然后向消息服务端拉取消息
                     final long offset = this.rebalanceImpl.computePullFromWhere(pullRequest.getMessageQueue());
                     boolean brokerBusy = offset < pullRequest.getNextOffset();
                     log.info("the first time to pull message, so fix offset from broker. pullRequest: {} NewOffset: {} brokerBusy: {}",
@@ -292,6 +293,7 @@ public class DefaultMQPushConsumerImpl implements MQConsumerInner {
                     pullRequest.setNextOffset(offset);
                 }
             } else {
+                // 如果消息处理队列未被锁定，则延迟3s后再将PullRequest对象放入拉取任务中
                 this.executePullRequestLater(pullRequest, pullTimeDelayMillsWhenException);
                 log.info("pull message later because not locked in broker, {}", pullRequest);
                 return;

@@ -378,7 +378,9 @@ public abstract class RebalanceImpl {
         List<PullRequest> pullRequestList = new ArrayList<PullRequest>();
         for (MessageQueue mq : mqSet) {
             if (!this.processQueueTable.containsKey(mq)) {
+                // 顺序消息，上锁(向Broker发起锁定请求)
                 if (isOrder && !this.lock(mq)) {
+                    // => 等待其他消费者释放锁，一直到下一次Rebalance时再尝试加锁
                     log.warn("doRebalance, {}, add a new mq failed, {}, because lock failed", consumerGroup, mq);
                     continue;
                 }
