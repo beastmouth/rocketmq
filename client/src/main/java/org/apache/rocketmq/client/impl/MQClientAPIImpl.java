@@ -724,6 +724,8 @@ public class MQClientAPIImpl {
                 assert false;
                 return null;
             case ASYNC:
+                // 都是异步拉取，只不过一个返回结果一个不返回
+                // 然后callBack会在消息调用完成后回调 => 见当前方法实现
                 this.pullMessageAsync(addr, request, timeoutMillis, pullCallback);
                 return null;
             case SYNC:
