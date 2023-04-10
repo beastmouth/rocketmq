@@ -77,6 +77,7 @@ public class FileWatchService extends ServiceThread {
                         log.warn(this.getServiceName() + " service has exception when calculate the file hash. ", ignored);
                         continue;
                     }
+                    // 文件hash匹配不上
                     if (!newHash.equals(fileCurrentHash.get(i))) {
                         fileCurrentHash.set(i, newHash);
                         listener.onChanged(watchFiles.get(i));
@@ -92,6 +93,7 @@ public class FileWatchService extends ServiceThread {
     private String hash(String filePath) throws IOException, NoSuchAlgorithmException {
         Path path = Paths.get(filePath);
         md.update(Files.readAllBytes(path));
+        // 将配置文件进行md5加密，得到其md5值
         byte[] hash = md.digest();
         return UtilAll.bytes2string(hash);
     }

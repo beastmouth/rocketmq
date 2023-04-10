@@ -56,6 +56,7 @@ public class AclClient {
     }
 
     public static void producer() throws MQClientException {
+        // 1.传入AclClientRPCHook钩子函数 2.钩子函数传入用户名和密码
         DefaultMQProducer producer = new DefaultMQProducer("ProducerGroupName", getAclRPCHook());
         producer.setNamesrvAddr("127.0.0.1:9876");
         producer.start();
@@ -80,6 +81,7 @@ public class AclClient {
 
     public static void pushConsumer() throws MQClientException {
 
+        // acl的构造器逻辑与发送者类似
         DefaultMQPushConsumer consumer = new DefaultMQPushConsumer("please_rename_unique_group_name_5", getAclRPCHook(), new AllocateMessageQueueAveragely());
         consumer.setNamesrvAddr("127.0.0.1:9876");
         consumer.subscribe("TopicTest", "*");

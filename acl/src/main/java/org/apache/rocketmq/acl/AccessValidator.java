@@ -25,6 +25,7 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 public interface AccessValidator {
 
     /**
+     * 从请求头中解析本次请求对应的访问资源，即本次请求需要的访问权限
      * Parse to get the AccessResource(user, resource, needed permission)
      *
      * @param request
@@ -34,6 +35,8 @@ public interface AccessValidator {
     AccessResource parse(RemotingCommand request, String remoteAddr);
 
     /**
+     * 根据本次需要访问的权限，与请求用户拥有的权限进行对比验证，判断请求用户是否拥有权限，
+     * 如果请求用户没有访问该操作的权限，则抛出异常，否则放行
      * Validate the access resource.
      *
      * @param accessResource
@@ -42,6 +45,7 @@ public interface AccessValidator {
 
     /**
      * Update the access resource config
+     * 更新ACL访问控制列表的配置
      *
      * @param plainAccessConfig
      * @return
@@ -50,6 +54,7 @@ public interface AccessValidator {
 
     /**
      * Delete the access resource config
+     * 根据账户名称删除访问授权规则
      *
      * @return
      */
@@ -57,19 +62,21 @@ public interface AccessValidator {
 
     /**
      * Get the access resource config version information
-     *
+     * 获取ACL配置当前的版本号
      * @return
      */
     String getAclConfigVersion();
 
     /**
      * Update globalWhiteRemoteAddresses in acl yaml config file
+     * 更新全局白名单IP列表
      * @return
      */
     boolean updateGlobalWhiteAddrsConfig(List<String> globalWhiteAddrsList);
 
     /**
      * get broker cluster acl config information
+     * 获取ACL相关的配置信息
      * @return
      */
     AclConfig getAllAclConfig();

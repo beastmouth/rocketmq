@@ -43,21 +43,29 @@ public class PlainPermissionManager {
 
     private static final InternalLogger log = InternalLoggerFactory.getLogger(LoggerName.COMMON_LOGGER_NAME);
 
+    // ACL默认配置文件名称
     private static final String DEFAULT_PLAIN_ACL_FILE = "/conf/plain_acl.yml";
 
+    // 配置文件所在的目录
     private String fileHome = System.getProperty(MixAll.ROCKETMQ_HOME_PROPERTY,
         System.getenv(MixAll.ROCKETMQ_HOME_ENV));
 
+    // ACL配置文件名称
     private String fileName = System.getProperty("rocketmq.acl.plain.file", DEFAULT_PLAIN_ACL_FILE);
 
+    // 权限配置映射表 用户名为键
     private  Map<String/** AccessKey **/, PlainAccessResource> plainAccessResourceMap = new HashMap<>();
 
+    //
     private  List<RemoteAddressStrategy> globalWhiteRemoteAddressStrategy = new ArrayList<>();
 
+    // 远程IP解析策略工厂
     private RemoteAddressStrategyFactory remoteAddressStrategyFactory = new RemoteAddressStrategyFactory();
 
+    // 是否监听 plain_acl.yml 文件 => 一旦该文件的内容改变，可以在不重启服务器的情况下自动生效
     private boolean isWatchStart;
 
+    // 配置文件版本号
     private final DataVersion dataVersion = new DataVersion();
 
     public PlainPermissionManager() {
@@ -76,6 +84,7 @@ public class PlainPermissionManager {
             throw new AclException(String.format("%s file  is not data", fileHome + File.separator + fileName));
         }
         log.info("Broker plain acl conf data is : ", plainAclConfData.toString());
+        // 根据ACL配置文件中配置的全局白名单列表，构建对应规则的校验器
         JSONArray globalWhiteRemoteAddressesList = plainAclConfData.getJSONArray("globalWhiteRemoteAddresses");
         if (globalWhiteRemoteAddressesList != null && !globalWhiteRemoteAddressesList.isEmpty()) {
             for (int i = 0; i < globalWhiteRemoteAddressesList.size(); i++) {
@@ -84,6 +93,7 @@ public class PlainPermissionManager {
             }
         }
 
+        // 接受account的标签 按用户名将其配置规则存入 PlainAccessResourceMap 中
         JSONArray accounts = plainAclConfData.getJSONArray(AclConstants.CONFIG_ACCOUNTS);
         if (accounts != null && !accounts.isEmpty()) {
             List<PlainAccessConfig> plainAccessConfigList = accounts.toJavaList(PlainAccessConfig.class);
@@ -296,6 +306,7 @@ public class PlainPermissionManager {
     private void watch() {
         try {
             String watchFilePath = fileHome + fileName;
+            // 创建文件监听器，用于监听ACL的规则配置文件
             FileWatchService fileWatchService = new FileWatchService(new String[] {watchFilePath}, new FileWatchService.Listener() {
                 @Override
                 public void onChanged(String path) {
@@ -312,12 +323,14 @@ public class PlainPermissionManager {
     }
 
     void checkPerm(PlainAccessResource needCheckedAccess, PlainAccessResource ownedAccess) {
+        // 管理员权限校验
         if (Permission.needAdminPerm(needCheckedAccess.getRequestCode()) && !ownedAccess.isAdmin()) {
             throw new AclException(String.format("Need admin permission for request code=%d, but accessKey=%s is not", needCheckedAccess.getRequestCode(), ownedAccess.getAccessKey()));
         }
         Map<String, Byte> needCheckedPermMap = needCheckedAccess.getResourcePermMap();
         Map<String, Byte> ownedPermMap = ownedAccess.getResourcePermMap();
 
+        // 无需要鉴权的资源
         if (needCheckedPermMap == null) {
             // If the needCheckedPermMap is null,then return
             return;
@@ -337,6 +350,7 @@ public class PlainPermissionManager {
                 // Check the default perm
                 byte ownedPerm = isGroup ? ownedAccess.getDefaultGroupPerm() :
                     ownedAccess.getDefaultTopicPerm();
+                // 遍历校验权限
                 if (!Permission.checkPermission(neededPerm, ownedPerm)) {
                     throw new AclException(String.format("No default permission for %s", PlainAccessResource.printStr(resource, isGroup)));
                 }
@@ -384,12 +398,14 @@ public class PlainPermissionManager {
     public void validate(PlainAccessResource plainAccessResource) {
 
         // Check the global white remote addr
+        // 验证ip白名单规则
         for (RemoteAddressStrategy remoteAddressStrategy : globalWhiteRemoteAddressStrategy) {
             if (remoteAddressStrategy.match(plainAccessResource)) {
                 return;
             }
         }
 
+        // accessKey是否合法
         if (plainAccessResource.getAccessKey() == null) {
             throw new AclException(String.format("No accessKey is configured"));
         }
@@ -405,12 +421,13 @@ public class PlainPermissionManager {
         }
 
         // Check the signature
+        // 签名是否一致
         String signature = AclUtils.calSignature(plainAccessResource.getContent(), ownedAccess.getSecretKey());
         if (!signature.equals(plainAccessResource.getSignature())) {
             throw new AclException(String.format("Check signature failed for accessKey=%s", plainAccessResource.getAccessKey()));
         }
         // Check perm of each resource
-
+        // 校验资源访问权限
         checkPerm(plainAccessResource, ownedAccess);
     }
 

@@ -40,6 +40,7 @@ import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 
 import static org.apache.rocketmq.acl.plain.PlainAccessResource.getRetryTopic;
 
+// RocketMQ基于yml配置格式的访问验证器
 public class PlainAccessValidator implements AccessValidator {
 
     private PlainPermissionManager aclPlugEngine;
@@ -50,6 +51,7 @@ public class PlainAccessValidator implements AccessValidator {
 
     @Override
     public AccessResource parse(RemotingCommand request, String remoteAddr) {
+        // 创建PlainAccessResource对象，用来存储本次请求需要访问的权限
         PlainAccessResource accessResource = new PlainAccessResource();
         if (remoteAddr != null && remoteAddr.contains(":")) {
             accessResource.setWhiteRemoteAddress(remoteAddr.substring(0, remoteAddr.lastIndexOf(':')));
@@ -123,7 +125,7 @@ public class PlainAccessValidator implements AccessValidator {
             throw new AclException(t.getMessage(), t);
         }
 
-        // Content
+        // Content 对扩展字段自行排序
         SortedMap<String, String> map = new TreeMap<String, String>();
         for (Map.Entry<String, String> entry : request.getExtFields().entrySet()) {
             if (!SessionCredentials.SIGNATURE.equals(entry.getKey())

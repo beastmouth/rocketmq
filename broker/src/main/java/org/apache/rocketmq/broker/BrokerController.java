@@ -507,15 +507,18 @@ public class BrokerController {
             return;
         }
 
+        // SPI机制 加载AccessValidator实现类
         List<AccessValidator> accessValidators = ServiceProvider.load(ServiceProvider.ACL_VALIDATOR_ID, AccessValidator.class);
         if (accessValidators == null || accessValidators.isEmpty()) {
             log.info("The broker dose not load the AccessValidator");
             return;
         }
 
+        // 遍历acl访问验证器
         for (AccessValidator accessValidator: accessValidators) {
             final AccessValidator validator = accessValidator;
             accessValidatorMap.put(validator.getClass(),validator);
+            // 注册钩子函数
             this.registerServerRPCHook(new RPCHook() {
 
                 @Override
